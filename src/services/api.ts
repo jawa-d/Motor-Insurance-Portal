@@ -1,51 +1,92 @@
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 const apiKey = import.meta.env.VITE_API_KEY;
-const isLocalDev = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+const isDevelopment = import.meta.env.DEV;
 
 export class ApiError extends Error {
   status: number;
+  responseBody?: string;
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, responseBody?: string) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.responseBody = responseBody;
   }
 }
 
-export async function postMultipart<TResponse>(path: string, body: FormData): Promise<TResponse> {
-  if (!apiBaseUrl) {
-    throw new ApiError(500, "API base URL is not configured.");
-  }
+function describeFormData(body: FormData) {
+  return Array.from(body.entries()).map(([key, value]) => {
+    if (value instanceof File) {
+      return {
+        key,
+        fileName: value.name,
+        fileSize: value.size,
+        fileType: value.type,
+      };
+    }
 
-  if (!apiKey || apiKey === "YOUR_PUBLIC_API_KEY") {
-    throw new ApiError(401, "API key is not configured.");
-  }
-
-  const baseUrl = isLocalDev ? "" : apiBaseUrl.replace(/\/$/, "");
-  const response = await fetch(`${baseUrl}${path}`, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "x-api-key": apiKey,
-    },
-    body,
-    redirect: "manual",
+    return { key, value };
   });
+}
 
-  if (response.status >= 300 && response.status < 400) {
-    throw new ApiError(401, "Request was redirected to authentication.");
+export async function postMultipart<TResponse>(path: string, body: FormData): Promise<TResponse> {
+  try {
+    if (!apiBaseUrl) {
+      throw new ApiError(500, "API base URL is not configured.");
+    }
+
+    if (!apiKey || apiKey === "YOUR_PUBLIC_API_KEY" || apiKey === "replace_with_production_api_key") {
+      throw new ApiError(401, "API key is not configured.");
+    }
+
+    const method = "POST";
+    const baseUrl = apiBaseUrl.replace(/\/$/, "");
+    const apiUrl = `${baseUrl}${path}`;
+
+    if (isDevelopment) {
+      console.log("API URL:", apiUrl);
+      console.log("HTTP Method:", method);
+      console.log("Request:", describeFormData(body));
+    }
+
+    const response = await fetch(apiUrl, {
+      method,
+      headers: {
+        Accept: "application/json",
+        "x-api-key": apiKey,
+      },
+      body,
+      redirect: "manual",
+    });
+
+    const responseBody = await response.text();
+
+    if (isDevelopment) {
+      console.log("Response Status:", response.status);
+      console.log("Response:", responseBody);
+    }
+
+    if (response.status >= 300 && response.status < 400) {
+      throw new ApiError(401, "Request was redirected to authentication.", responseBody);
+    }
+
+    let data: unknown = null;
+    const contentType = response.headers.get("content-type") ?? "";
+
+    if (contentType.includes("application/json") && responseBody) {
+      data = JSON.parse(responseBody);
+    }
+
+    if (!response.ok) {
+      throw new ApiError(response.status, "Request failed.", responseBody);
+    }
+
+    return data as TResponse;
+  } catch (error) {
+    if (isDevelopment) {
+      console.log("API Exception:", error);
+    }
+
+    throw error;
   }
-
-  let data: unknown = null;
-  const contentType = response.headers.get("content-type") ?? "";
-
-  if (contentType.includes("application/json")) {
-    data = await response.json();
-  }
-
-  if (!response.ok) {
-    throw new ApiError(response.status, "Request failed.");
-  }
-
-  return data as TResponse;
 }

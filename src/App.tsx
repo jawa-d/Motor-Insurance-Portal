@@ -20,6 +20,8 @@ const documentKeys: DocumentKey[] = [
   "backResidenceCard",
 ];
 
+const isDevelopment = import.meta.env.DEV;
+
 const sectionAnimation = {
   initial: { opacity: 0, y: 18 },
   whileInView: { opacity: 1, y: 0 },
@@ -35,6 +37,7 @@ function App() {
   const [documents, setDocuments] = useState<Partial<Record<DocumentKey, UploadFile>>>({});
   const [errors, setErrors] = useState<Errors>({});
   const [requestNumber, setRequestNumber] = useState<string | null>(null);
+  const [trackingNumber, setTrackingNumber] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -58,7 +61,7 @@ function App() {
     vehicleImages.length >= 5,
     documentKeys.every((key) => documents[key]),
     form.notes.trim().length > 0,
-    Boolean(requestNumber),
+    Boolean(requestNumber && trackingNumber),
   ];
 
   const uploadLabels = {
@@ -112,6 +115,14 @@ function App() {
   };
 
   const getSubmitErrorMessage = (error: unknown) => {
+    if (isDevelopment && error instanceof Error) {
+      if (error instanceof ApiError && error.responseBody) {
+        return `${error.message} Response: ${error.responseBody}`;
+      }
+
+      return error.message;
+    }
+
     if (error instanceof ApiError) {
       if (error.status === 400) return t.submitError400;
       if (error.status === 401) return t.submitError401;
@@ -130,6 +141,8 @@ function App() {
     const parsed = schema.safeParse(form);
     const nextErrors: Errors = {};
     setSubmitError(null);
+    setRequestNumber(null);
+    setTrackingNumber(null);
 
     if (!parsed.success) {
       for (const issue of parsed.error.issues) {
@@ -148,6 +161,7 @@ function App() {
         const result = await submitMotorRequest({ form, vehicleImages, documents, agentCode });
         resetForm();
         setRequestNumber(result.requestNumber);
+        setTrackingNumber(result.trackingNumber);
         window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
       } catch (error) {
         setSubmitError(getSubmitErrorMessage(error));
@@ -322,11 +336,14 @@ function App() {
             </button>
           </motion.section>
 
-          {requestNumber ? (
+          {requestNumber && trackingNumber ? (
             <motion.section className="success-panel" role="status" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
               <CheckCircle2 size={42} aria-hidden="true" />
               <h2>{t.apiSuccessTitle}</h2>
               <p>{t.successBody}</p>
+              <strong>
+                {t.trackingNumber}: {trackingNumber}
+              </strong>
               <strong>
                 {t.requestNumber}: {requestNumber}
               </strong>

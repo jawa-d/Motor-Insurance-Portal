@@ -11,14 +11,18 @@ const documentFieldMap: Record<DocumentKey, string> = {
 };
 
 type MotorRequestResponse = {
+  trackingNumber?: string;
   requestNumber?: string;
   data?: {
+    trackingNumber?: string;
     requestNumber?: string;
     motorRequest?: {
+      trackingNumber?: string;
       requestNumber?: string;
     };
   };
   motorRequest?: {
+    trackingNumber?: string;
     requestNumber?: string;
   };
 };
@@ -65,6 +69,15 @@ function extractRequestNumber(response: MotorRequestResponse) {
   );
 }
 
+function extractTrackingNumber(response: MotorRequestResponse) {
+  return (
+    response.trackingNumber ??
+    response.data?.trackingNumber ??
+    response.data?.motorRequest?.trackingNumber ??
+    response.motorRequest?.trackingNumber
+  );
+}
+
 export async function submitMotorRequest(input: MotorRequestInput) {
   const formData = new FormData();
 
@@ -81,12 +94,17 @@ export async function submitMotorRequest(input: MotorRequestInput) {
     }
   }
 
-  const response = await postMultipart<MotorRequestResponse>("/api/v1/public/motor-requests", formData);
+  const response = await postMultipart<MotorRequestResponse>("/api/public/motor-requests", formData);
+  const trackingNumber = extractTrackingNumber(response);
   const requestNumber = extractRequestNumber(response);
 
   if (!requestNumber) {
     throw new Error("Request number was not returned.");
   }
 
-  return { requestNumber };
+  if (!trackingNumber) {
+    throw new Error("Tracking number was not returned.");
+  }
+
+  return { requestNumber, trackingNumber };
 }
