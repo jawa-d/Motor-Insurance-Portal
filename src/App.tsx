@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { CarFront, CheckCircle2, Globe2, Moon, ShieldCheck, Sun } from "lucide-react";
+import { CarFront, CheckCircle2, Clock3, FileSearch, Globe2, MapPinned, Moon, ShieldCheck, Sun } from "lucide-react";
 import { type ChangeEvent, useMemo, useState } from "react";
 import { DocumentUpload } from "./components/DocumentUpload";
 import { FloatingField } from "./components/FloatingField";
@@ -29,6 +29,11 @@ const sectionAnimation = {
   transition: { duration: 0.45 },
 };
 
+type TrackingLookup = {
+  code: string;
+  activeIndex: number;
+};
+
 function App() {
   const [language, setLanguage] = useState<Language>("ar");
   const [darkMode, setDarkMode] = useState(false);
@@ -38,6 +43,8 @@ function App() {
   const [errors, setErrors] = useState<Errors>({});
   const [requestNumber, setRequestNumber] = useState<string | null>(null);
   const [trackingNumber, setTrackingNumber] = useState<string | null>(null);
+  const [trackingInput, setTrackingInput] = useState("");
+  const [trackingLookup, setTrackingLookup] = useState<TrackingLookup | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -45,6 +52,7 @@ function App() {
   const direction = language === "ar" ? "rtl" : "ltr";
 
   const steps = [t.customer, t.vehicle, t.images, t.documents, t.notes, t.submitStep];
+  const trackingSteps = [t.trackReceived, t.trackReview, t.trackDocuments, t.trackPricing, t.trackContact];
   const completed = [
     ["fullName", "phone", "nationalId", "address", "city"].every((key) => form[key as keyof FormState]),
     [
@@ -100,6 +108,19 @@ function App() {
     const value = event.target.type === "checkbox" ? (event.target as HTMLInputElement).checked : event.target.value;
     setForm((current) => ({ ...current, [key]: value }));
     setErrors((current) => ({ ...current, [key]: undefined }));
+  };
+
+  const lookupTracking = (event: React.FormEvent) => {
+    event.preventDefault();
+    const code = trackingInput.trim();
+
+    if (!code) return;
+
+    const score = Array.from(code).reduce((total, character) => total + character.charCodeAt(0), 0);
+    setTrackingLookup({
+      code,
+      activeIndex: Math.min(trackingSteps.length - 1, Math.max(1, score % trackingSteps.length)),
+    });
   };
 
   const updateDocument = (key: DocumentKey, file?: UploadFile) => {
@@ -225,6 +246,10 @@ function App() {
               <CarFront size={20} aria-hidden="true" />
               {t.start}
             </a>
+            <a className="ghost-link" href="#track-request">
+              <MapPinned size={20} aria-hidden="true" />
+              {t.trackRequest}
+            </a>
           </motion.div>
           <motion.div
             className="hero-visual"
@@ -249,6 +274,60 @@ function App() {
             </div>
           </motion.div>
         </section>
+
+        <motion.section id="track-request" className="panel tracking-panel" {...sectionAnimation}>
+          <div className="tracking-header">
+            <span className="eyebrow">
+              <FileSearch size={18} aria-hidden="true" />
+              {t.trackEyebrow}
+            </span>
+            <h2>{t.trackTitle}</h2>
+            <p>{t.trackSubtitle}</p>
+          </div>
+
+          <form className="tracking-form" onSubmit={lookupTracking}>
+            <FloatingField
+              id="tracking-code"
+              label={t.trackingNumber}
+              value={trackingInput}
+              required
+              onChange={(event) => setTrackingInput(event.target.value)}
+            />
+            <button className="submit-button" type="submit">
+              <MapPinned size={20} aria-hidden="true" />
+              {t.trackButton}
+            </button>
+          </form>
+
+          {trackingLookup ? (
+            <div className="tracking-result" role="status">
+              <div>
+                <span>{t.currentStatus}</span>
+                <strong>{trackingSteps[trackingLookup.activeIndex]}</strong>
+              </div>
+              <small>
+                {t.trackingNumber}: {trackingLookup.code}
+              </small>
+            </div>
+          ) : null}
+
+          <ol className="tracking-timeline" aria-label={t.trackTitle}>
+            {trackingSteps.map((step, index) => {
+              const isDone = trackingLookup ? index <= trackingLookup.activeIndex : index === 0;
+              const isActive = trackingLookup ? index === trackingLookup.activeIndex : index === 0;
+
+              return (
+                <li key={step} className={`${isDone ? "done" : ""} ${isActive ? "active" : ""}`}>
+                  <span className="timeline-dot">
+                    {isDone ? <CheckCircle2 size={20} aria-hidden="true" /> : <Clock3 size={18} aria-hidden="true" />}
+                  </span>
+                  <strong>{step}</strong>
+                  <small>{isDone ? t.completed : t.pending}</small>
+                </li>
+              );
+            })}
+          </ol>
+        </motion.section>
 
         <ProgressSteps steps={steps} completed={completed} labels={{ completed: t.completed, pending: t.pending }} />
 

@@ -123,6 +123,7 @@ a,
 
 .icon-button,
 .ghost-button,
+.ghost-link,
 .primary-link,
 .submit-button {
   display: inline-flex;
@@ -145,6 +146,16 @@ a,
   color: var(--text);
 }
 
+.ghost-link {
+  min-height: 52px;
+  margin-inline-start: 0.65rem;
+  padding: 0.85rem 1.2rem;
+  border: 1px solid color-mix(in srgb, var(--green) 35%, var(--line));
+  background: var(--surface-strong);
+  color: var(--green-dark);
+  font-weight: 800;
+}
+
 .ghost-button:disabled,
 .preview-meta button:disabled {
   cursor: wait;
@@ -153,6 +164,7 @@ a,
 
 .icon-button:hover,
 .ghost-button:hover,
+.ghost-link:hover,
 .primary-link:hover,
 .submit-button:hover:not(:disabled) {
   transform: translateY(-1px);
@@ -276,6 +288,11 @@ h1 {
   font-size: clamp(1.08rem, 2vw, 1.35rem);
   line-height: 1.9;
   max-width: 62ch;
+}
+
+.hero .primary-link,
+.hero .ghost-link {
+  margin-top: 0.45rem;
 }
 
 .primary-link,
@@ -419,6 +436,134 @@ h1 {
 .request-form {
   display: grid;
   gap: 1.25rem;
+}
+
+.tracking-panel {
+  display: grid;
+  gap: 1.35rem;
+  margin-bottom: 1.25rem;
+}
+
+.tracking-header {
+  max-width: 720px;
+}
+
+.tracking-header h2 {
+  margin-bottom: 0.5rem;
+}
+
+.tracking-header p {
+  color: var(--muted);
+  line-height: 1.8;
+}
+
+.tracking-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.85rem;
+  align-items: start;
+}
+
+.tracking-form .submit-button {
+  margin-top: 0;
+  width: auto;
+  min-width: 170px;
+}
+
+.tracking-result {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid color-mix(in srgb, var(--green) 38%, var(--line));
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--green) 12%, transparent), transparent),
+    var(--surface-strong);
+}
+
+.tracking-result span,
+.tracking-result small {
+  color: var(--muted);
+}
+
+.tracking-result strong {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--green-dark);
+  font-size: 1.2rem;
+}
+
+.tracking-timeline {
+  --progress-line: color-mix(in srgb, var(--green) 28%, var(--line));
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tracking-timeline li {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 0.45rem;
+  min-height: 128px;
+  padding: 0 0.5rem;
+  text-align: center;
+}
+
+.tracking-timeline li::before {
+  content: "";
+  position: absolute;
+  top: 22px;
+  inset-inline: -50% 50%;
+  height: 3px;
+  background: var(--line);
+}
+
+.tracking-timeline li.done::before {
+  background: var(--progress-line);
+}
+
+.tracking-timeline li:first-child::before {
+  display: none;
+}
+
+.timeline-dot {
+  position: relative;
+  z-index: 1;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-strong);
+  color: var(--muted);
+  box-shadow: 0 10px 20px rgba(22, 72, 48, 0.08);
+}
+
+.tracking-timeline li.done .timeline-dot {
+  border-color: color-mix(in srgb, var(--green) 72%, var(--line));
+  background: color-mix(in srgb, var(--green) 14%, var(--surface-strong));
+  color: var(--green-dark);
+}
+
+.tracking-timeline li.active .timeline-dot {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--gold) 18%, transparent);
+}
+
+.tracking-timeline strong {
+  font-size: 0.95rem;
+}
+
+.tracking-timeline small {
+  color: var(--muted);
 }
 
 .panel,
@@ -717,8 +862,33 @@ h1 {
   }
 
   .steps,
+  .tracking-timeline,
   .grid.three {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tracking-timeline {
+    gap: 0.9rem;
+  }
+
+  .tracking-timeline li {
+    align-items: center;
+    grid-template-columns: auto minmax(0, 1fr);
+    justify-items: start;
+    min-height: auto;
+    padding: 0.85rem;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface-strong);
+    text-align: start;
+  }
+
+  .tracking-timeline li::before {
+    display: none;
+  }
+
+  .tracking-timeline small {
+    grid-column: 2;
   }
 }
 
@@ -756,10 +926,27 @@ h1 {
   }
 
   .steps,
+  .tracking-form,
+  .tracking-timeline,
   .grid.two,
   .grid.three,
   .upload-drop {
     grid-template-columns: 1fr;
+  }
+
+  .ghost-link {
+    margin-inline-start: 0;
+  }
+
+  .hero .primary-link,
+  .hero .ghost-link,
+  .tracking-form .submit-button {
+    width: 100%;
+  }
+
+  .tracking-result {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .upload-drop {
