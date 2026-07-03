@@ -23,7 +23,7 @@ import { ProgressSteps } from "./components/ProgressSteps";
 import { UploadZone } from "./components/UploadZone";
 import { translations, type Language } from "./i18n";
 import { ApiError } from "./services/api";
-import { submitMotorRequest } from "./services/motor-request";
+import { submitMotorRequest, trackMotorRequest, type MotorRequestTracking, type PublicMotorRequestStatus } from "./services/motor-request";
 import type { DocumentKey, Errors, FormState, UploadFile } from "./types";
 import { createSchema, initialForm } from "./validation";
 
@@ -45,17 +45,22 @@ const sectionAnimation = {
   transition: { duration: 0.45 },
 };
 
-type TrackingLookup = {
-  code: string;
-  activeIndex: number;
-};
-
 const supportPhones = ["+964 770 483 9994", "+964 781 104 0003", "+964 790 612 3541"];
 const supportWhatsApp = [
   { number: "+964 770 483 9994", href: "https://wa.me/9647704839994" },
   { number: "+964 790 612 3541", href: "https://wa.me/9647906123541" },
   { number: "+964 781 104 0003", href: "https://wa.me/9647811040003" },
 ];
+
+const trackingStatusIndex: Record<PublicMotorRequestStatus, number> = {
+  RECEIVED: 0,
+  UNDER_REVIEW: 1,
+  DOCUMENTS_CHECK: 2,
+  QUOTE_PREPARATION: 3,
+  CONTACTING_CUSTOMER: 4,
+  COMPLETED: 4,
+  REJECTED: 4,
+};
 
 function App() {
   const [language, setLanguage] = useState<Language>("ar");
@@ -67,7 +72,9 @@ function App() {
   const [requestNumber, setRequestNumber] = useState<string | null>(null);
   const [trackingNumber, setTrackingNumber] = useState<string | null>(null);
   const [trackingInput, setTrackingInput] = useState("");
-  const [trackingLookup, setTrackingLookup] = useState<TrackingLookup | null>(null);
+  const [trackingLookup, setTrackingLookup] = useState<MotorRequestTracking | null>(null);
+  const [trackingError, setTrackingError] = useState<string | null>(null);
+  const [isTracking, setIsTracking] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -133,17 +140,42 @@ function App() {
     setErrors((current) => ({ ...current, [key]: undefined }));
   };
 
-  const lookupTracking = (event: React.FormEvent) => {
+  const getTrackingErrorMessage = (error: unknown) => {
+    if (isDevelopment && error instanceof Error) {
+      if (error instanceof ApiError && error.responseBody) {
+        return `${error.message} Response: ${error.responseBody}`;
+      }
+
+      return error.message;
+    }
+
+    if (error instanceof ApiError) {
+      if (error.status === 400) return t.trackingError400;
+      if (error.status === 401) return t.trackingError401;
+      if (error.status === 404) return t.trackingError404;
+      if (error.status >= 500) return t.trackingError500;
+    }
+
+    return t.trackingErrorGeneric;
+  };
+
+  const lookupTracking = async (event: React.FormEvent) => {
     event.preventDefault();
     const code = trackingInput.trim();
 
     if (!code) return;
 
-    const score = Array.from(code).reduce((total, character) => total + character.charCodeAt(0), 0);
-    setTrackingLookup({
-      code,
-      activeIndex: Math.min(trackingSteps.length - 1, Math.max(1, score % trackingSteps.length)),
-    });
+    try {
+      setIsTracking(true);
+      setTrackingError(null);
+      setTrackingLookup(null);
+      const result = await trackMotorRequest(code);
+      setTrackingLookup(result);
+    } catch (error) {
+      setTrackingError(getTrackingErrorMessage(error));
+    } finally {
+      setIsTracking(false);
+    }
   };
 
   const updateDocument = (key: DocumentKey, file?: UploadFile) => {
@@ -214,6 +246,14 @@ function App() {
       }
     }
   };
+
+  const trackingActiveIndex = trackingLookup ? trackingStatusIndex[trackingLookup.status] : 0;
+  const trackingUpdatedAt = trackingLookup
+    ? new Intl.DateTimeFormat(language === "ar" ? "ar-IQ" : "en", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      }).format(new Date(trackingLookup.updatedAt))
+    : "";
 
   return (
     <div className={darkMode ? "app dark" : "app"} dir={direction} lang={language}>
@@ -324,28 +364,52 @@ function App() {
               required
               onChange={(event) => setTrackingInput(event.target.value)}
             />
-            <button className="submit-button" type="submit">
-              <MapPinned size={20} aria-hidden="true" />
-              {t.trackButton}
+            <button className="submit-button" type="submit" disabled={isTracking}>
+              {isTracking ? <span className="spinner" aria-hidden="true" /> : <MapPinned size={20} aria-hidden="true" />}
+              {isTracking ? t.trackingLoading : t.trackButton}
             </button>
           </form>
+
+          {trackingError ? <p className="submit-error" role="alert">{trackingError}</p> : null}
 
           {trackingLookup ? (
             <div className="tracking-result" role="status">
               <div>
                 <span>{t.currentStatus}</span>
-                <strong>{trackingSteps[trackingLookup.activeIndex]}</strong>
+                <strong>{trackingLookup.statusLabel}</strong>
               </div>
+              <dl className="tracking-details">
+                <div>
+                  <dt>{t.trackingNumber}</dt>
+                  <dd>{trackingLookup.trackingNumber}</dd>
+                </div>
+                <div>
+                  <dt>{t.requestNumber}</dt>
+                  <dd>{trackingLookup.requestNumber}</dd>
+                </div>
+                <div>
+                  <dt>{t.customer}</dt>
+                  <dd>{trackingLookup.customerName}</dd>
+                </div>
+                <div>
+                  <dt>{t.vehicle}</dt>
+                  <dd>{trackingLookup.vehicle}</dd>
+                </div>
+                <div>
+                  <dt>{t.updatedAt}</dt>
+                  <dd>{trackingUpdatedAt}</dd>
+                </div>
+              </dl>
               <small>
-                {t.trackingNumber}: {trackingLookup.code}
+                {t.statusCode}: {trackingLookup.status}
               </small>
             </div>
           ) : null}
 
           <ol className="tracking-timeline" aria-label={t.trackTitle}>
             {trackingSteps.map((step, index) => {
-              const isDone = trackingLookup ? index <= trackingLookup.activeIndex : index === 0;
-              const isActive = trackingLookup ? index === trackingLookup.activeIndex : index === 0;
+              const isDone = trackingLookup ? index <= trackingActiveIndex : index === 0;
+              const isActive = trackingLookup ? index === trackingActiveIndex : index === 0;
 
               return (
                 <li key={step} className={`${isDone ? "done" : ""} ${isActive ? "active" : ""}`}>

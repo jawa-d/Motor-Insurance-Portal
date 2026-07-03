@@ -14,6 +14,21 @@ export class ApiError extends Error {
   }
 }
 
+function getApiConfig() {
+  if (!apiBaseUrl) {
+    throw new ApiError(500, "API base URL is not configured.");
+  }
+
+  if (!apiKey || apiKey === "YOUR_PUBLIC_API_KEY" || apiKey === "replace_with_production_api_key") {
+    throw new ApiError(401, "API key is not configured.");
+  }
+
+  return {
+    apiKey,
+    baseUrl: apiBaseUrl.replace(/\/$/, ""),
+  };
+}
+
 function describeFormData(body: FormData) {
   return Array.from(body.entries()).map(([key, value]) => {
     if (value instanceof File) {
@@ -31,17 +46,9 @@ function describeFormData(body: FormData) {
 
 export async function postMultipart<TResponse>(path: string, body: FormData): Promise<TResponse> {
   try {
-    if (!apiBaseUrl) {
-      throw new ApiError(500, "API base URL is not configured.");
-    }
-
-    if (!apiKey || apiKey === "YOUR_PUBLIC_API_KEY" || apiKey === "replace_with_production_api_key") {
-      throw new ApiError(401, "API key is not configured.");
-    }
-
+    const config = getApiConfig();
     const method = "POST";
-    const baseUrl = apiBaseUrl.replace(/\/$/, "");
-    const apiUrl = `${baseUrl}${path}`;
+    const apiUrl = `${config.baseUrl}${path}`;
 
     if (isDevelopment) {
       console.log("API URL:", apiUrl);
@@ -53,9 +60,61 @@ export async function postMultipart<TResponse>(path: string, body: FormData): Pr
       method,
       headers: {
         Accept: "application/json",
-        "x-api-key": apiKey,
+        "x-api-key": config.apiKey,
       },
       body,
+      redirect: "manual",
+    });
+
+    const responseBody = await response.text();
+
+    if (isDevelopment) {
+      console.log("Response Status:", response.status);
+      console.log("Response:", responseBody);
+    }
+
+    if (response.status >= 300 && response.status < 400) {
+      throw new ApiError(401, "Request was redirected to authentication.", responseBody);
+    }
+
+    let data: unknown = null;
+    const contentType = response.headers.get("content-type") ?? "";
+
+    if (contentType.includes("application/json") && responseBody) {
+      data = JSON.parse(responseBody);
+    }
+
+    if (!response.ok) {
+      throw new ApiError(response.status, "Request failed.", responseBody);
+    }
+
+    return data as TResponse;
+  } catch (error) {
+    if (isDevelopment) {
+      console.log("API Exception:", error);
+    }
+
+    throw error;
+  }
+}
+
+export async function getJson<TResponse>(path: string): Promise<TResponse> {
+  try {
+    const config = getApiConfig();
+    const method = "GET";
+    const apiUrl = `${config.baseUrl}${path}`;
+
+    if (isDevelopment) {
+      console.log("API URL:", apiUrl);
+      console.log("HTTP Method:", method);
+    }
+
+    const response = await fetch(apiUrl, {
+      method,
+      headers: {
+        Accept: "application/json",
+        "x-api-key": config.apiKey,
+      },
       redirect: "manual",
     });
 

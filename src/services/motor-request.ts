@@ -1,5 +1,5 @@
 import type { DocumentKey, FormState, UploadFile } from "../types";
-import { postMultipart } from "./api";
+import { getJson, postMultipart } from "./api";
 
 const documentFieldMap: Record<DocumentKey, string> = {
   frontNationalId: "documents.nationalIdFront",
@@ -25,6 +25,25 @@ type MotorRequestResponse = {
     trackingNumber?: string;
     requestNumber?: string;
   };
+};
+
+export type PublicMotorRequestStatus =
+  | "RECEIVED"
+  | "UNDER_REVIEW"
+  | "DOCUMENTS_CHECK"
+  | "QUOTE_PREPARATION"
+  | "CONTACTING_CUSTOMER"
+  | "COMPLETED"
+  | "REJECTED";
+
+export type MotorRequestTracking = {
+  trackingNumber: string;
+  requestNumber: string;
+  status: PublicMotorRequestStatus;
+  statusLabel: string;
+  updatedAt: string;
+  customerName: string;
+  vehicle: string;
 };
 
 export type MotorRequestInput = {
@@ -125,4 +144,10 @@ export async function submitMotorRequest(input: MotorRequestInput) {
   }
 
   return { requestNumber, trackingNumber };
+}
+
+export async function trackMotorRequest(trackingNumber: string) {
+  const encodedTrackingNumber = encodeURIComponent(trackingNumber.trim());
+
+  return getJson<MotorRequestTracking>(`/api/public/motor-requests/track/${encodedTrackingNumber}`);
 }
