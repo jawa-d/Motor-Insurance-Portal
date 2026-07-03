@@ -1,19 +1,17 @@
-import type { IncomingMessage, ServerResponse } from "node:http";
-
-function sendJson(response: ServerResponse, statusCode: number, body: unknown) {
+function sendJson(response, statusCode, body) {
   response.statusCode = statusCode;
   response.setHeader("Content-Type", "application/json; charset=utf-8");
   response.end(JSON.stringify(body));
 }
 
-function getTrackingNumber(request: IncomingMessage) {
+function getTrackingNumber(request) {
   const requestUrl = new URL(request.url ?? "/", "http://localhost");
   const trackingNumber = requestUrl.searchParams.get("trackingNumber")?.trim();
 
   return trackingNumber || null;
 }
 
-export default async function handler(request: IncomingMessage, response: ServerResponse) {
+export default async function handler(request, response) {
   if (request.method === "OPTIONS") {
     response.statusCode = 204;
     response.end();
