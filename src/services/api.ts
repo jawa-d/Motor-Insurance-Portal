@@ -149,3 +149,50 @@ export async function getJson<TResponse>(path: string): Promise<TResponse> {
     throw error;
   }
 }
+
+export async function getSameOriginJson<TResponse>(path: string): Promise<TResponse> {
+  try {
+    if (isDevelopment) {
+      console.log("API URL:", path);
+      console.log("HTTP Method: GET");
+    }
+
+    const response = await fetch(path, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+      },
+      redirect: "manual",
+    });
+
+    const responseBody = await response.text();
+
+    if (isDevelopment) {
+      console.log("Response Status:", response.status);
+      console.log("Response:", responseBody);
+    }
+
+    if (response.status >= 300 && response.status < 400) {
+      throw new ApiError(401, "Request was redirected to authentication.", responseBody);
+    }
+
+    let data: unknown = null;
+    const contentType = response.headers.get("content-type") ?? "";
+
+    if (contentType.includes("application/json") && responseBody) {
+      data = JSON.parse(responseBody);
+    }
+
+    if (!response.ok) {
+      throw new ApiError(response.status, "Request failed.", responseBody);
+    }
+
+    return data as TResponse;
+  } catch (error) {
+    if (isDevelopment) {
+      console.log("API Exception:", error);
+    }
+
+    throw error;
+  }
+}

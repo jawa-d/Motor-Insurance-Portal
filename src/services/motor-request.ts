@@ -1,5 +1,5 @@
 import type { DocumentKey, FormState, UploadFile } from "../types";
-import { getJson, postMultipart } from "./api";
+import { getJson, getSameOriginJson, postMultipart } from "./api";
 
 const documentFieldMap: Record<DocumentKey, string> = {
   frontNationalId: "documents.nationalIdFront",
@@ -149,5 +149,9 @@ export async function submitMotorRequest(input: MotorRequestInput) {
 export async function trackMotorRequest(trackingNumber: string) {
   const encodedTrackingNumber = encodeURIComponent(trackingNumber.trim());
 
-  return getJson<MotorRequestTracking>(`/api/public/motor-requests/track/${encodedTrackingNumber}`);
+  if (import.meta.env.DEV) {
+    return getJson<MotorRequestTracking>(`/api/public/motor-requests/track/${encodedTrackingNumber}`);
+  }
+
+  return getSameOriginJson<MotorRequestTracking>(`/api/motor-request-track?trackingNumber=${encodedTrackingNumber}`);
 }
