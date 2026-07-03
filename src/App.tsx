@@ -1,5 +1,21 @@
 import { motion } from "framer-motion";
-import { CarFront, CheckCircle2, Clock3, FileSearch, Globe2, MapPinned, Moon, ShieldCheck, Sun } from "lucide-react";
+import {
+  Building2,
+  CarFront,
+  CheckCircle2,
+  Clock3,
+  ExternalLink,
+  FileSearch,
+  Globe2,
+  Mail,
+  MapPin,
+  MapPinned,
+  MessageCircle,
+  Moon,
+  Phone,
+  ShieldCheck,
+  Sun,
+} from "lucide-react";
 import { type ChangeEvent, useMemo, useState } from "react";
 import { DocumentUpload } from "./components/DocumentUpload";
 import { FloatingField } from "./components/FloatingField";
@@ -33,6 +49,13 @@ type TrackingLookup = {
   code: string;
   activeIndex: number;
 };
+
+const supportPhones = ["+964 770 483 9994", "+964 781 104 0003", "+964 790 612 3541"];
+const supportWhatsApp = [
+  { number: "+964 770 483 9994", href: "https://wa.me/9647704839994" },
+  { number: "+964 790 612 3541", href: "https://wa.me/9647906123541" },
+  { number: "+964 781 104 0003", href: "https://wa.me/9647811040003" },
+];
 
 function App() {
   const [language, setLanguage] = useState<Language>("ar");
@@ -200,6 +223,10 @@ function App() {
           <span>{t.portal}</span>
         </a>
         <div className="header-actions">
+          <a className="icon-button" href="#support">
+            <Phone size={18} aria-hidden="true" />
+            {t.support}
+          </a>
           <button className="icon-button" type="button" onClick={() => setLanguage(language === "ar" ? "en" : "ar")}>
             <Globe2 size={18} aria-hidden="true" />
             {t.language}
@@ -249,6 +276,10 @@ function App() {
             <a className="ghost-link" href="#track-request">
               <MapPinned size={20} aria-hidden="true" />
               {t.trackRequest}
+            </a>
+            <a className="ghost-link" href="#support">
+              <Phone size={20} aria-hidden="true" />
+              {t.support}
             </a>
           </motion.div>
           <motion.div
@@ -327,6 +358,79 @@ function App() {
               );
             })}
           </ol>
+        </motion.section>
+
+        <motion.section id="support" className="support-page" {...sectionAnimation}>
+          <div className="support-hero">
+            <span className="eyebrow">
+              <Building2 size={18} aria-hidden="true" />
+              {t.supportEyebrow}
+            </span>
+            <h2>{t.supportTitle}</h2>
+            <p>{t.supportSubtitle}</p>
+            <strong>{t.supportTagline}</strong>
+          </div>
+
+          <div className="support-grid">
+            <article className="support-card contact-card">
+              <span className="support-icon">
+                <Phone size={22} aria-hidden="true" />
+              </span>
+              <h3>{t.contactNumbers}</h3>
+              <div className="contact-list">
+                {supportPhones.map((phone) => (
+                  <a key={phone} href={`tel:${phone.replace(/\s/g, "")}`}>
+                    {phone}
+                  </a>
+                ))}
+              </div>
+            </article>
+
+            <article className="support-card">
+              <span className="support-icon">
+                <MessageCircle size={22} aria-hidden="true" />
+              </span>
+              <h3>{t.whatsappFollowup}</h3>
+              <div className="whatsapp-list">
+                {supportWhatsApp.map((item) => (
+                  <a key={item.href} className="whatsapp-link" href={item.href} target="_blank" rel="noreferrer">
+                    <MessageCircle size={18} aria-hidden="true" />
+                    {item.number}
+                  </a>
+                ))}
+              </div>
+            </article>
+
+            <article className="support-card">
+              <span className="support-icon">
+                <Globe2 size={22} aria-hidden="true" />
+              </span>
+              <h3>{t.website}</h3>
+              <a className="support-action" href="https://iraq-takaful.com/" target="_blank" rel="noreferrer">
+                iraq-takaful.com
+                <ExternalLink size={18} aria-hidden="true" />
+              </a>
+            </article>
+
+            <article className="support-card">
+              <span className="support-icon">
+                <Mail size={22} aria-hidden="true" />
+              </span>
+              <h3>{t.supportEmail}</h3>
+              <a className="support-action" href="mailto:info@iraq-takaful.com">
+                info@iraq-takaful.com
+                <Mail size={18} aria-hidden="true" />
+              </a>
+            </article>
+
+            <article className="support-card address-card">
+              <span className="support-icon">
+                <MapPin size={22} aria-hidden="true" />
+              </span>
+              <h3>{t.addressTitle}</h3>
+              <p>{t.supportAddress}</p>
+            </article>
+          </div>
         </motion.section>
 
         <ProgressSteps steps={steps} completed={completed} labels={{ completed: t.completed, pending: t.pending }} />
