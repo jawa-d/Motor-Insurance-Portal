@@ -530,6 +530,10 @@ h1 {
   list-style: none;
 }
 
+.tracking-timeline[class*="status-"] {
+  --progress-line: color-mix(in srgb, var(--status-accent) 36%, var(--line));
+}
+
 .tracking-timeline li {
   position: relative;
   display: grid;
@@ -573,14 +577,14 @@ h1 {
 }
 
 .tracking-timeline li.done .timeline-dot {
-  border-color: color-mix(in srgb, var(--green) 72%, var(--line));
-  background: color-mix(in srgb, var(--green) 14%, var(--surface-strong));
-  color: var(--green-dark);
+  border-color: color-mix(in srgb, var(--status-accent, var(--green)) 72%, var(--line));
+  background: color-mix(in srgb, var(--status-accent, var(--green)) 14%, var(--surface-strong));
+  color: var(--status-accent, var(--green-dark));
 }
 
 .tracking-timeline li.active .timeline-dot {
-  border-color: var(--gold);
-  box-shadow: 0 0 0 6px color-mix(in srgb, var(--gold) 18%, transparent);
+  border-color: var(--status-accent, var(--gold));
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--status-accent, var(--gold)) 18%, transparent);
 }
 
 .tracking-timeline strong {
@@ -588,6 +592,189 @@ h1 {
 }
 
 .tracking-timeline small {
+  color: var(--muted);
+}
+
+.tracking-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: clamp(1rem, 3vw, 2rem);
+  background: rgba(7, 18, 13, 0.58);
+  backdrop-filter: blur(12px);
+}
+
+.tracking-modal {
+  position: relative;
+  width: min(920px, 100%);
+  max-height: min(88vh, 820px);
+  overflow: auto;
+  padding: clamp(1rem, 3vw, 1.6rem);
+  border: 1px solid color-mix(in srgb, var(--status-accent) 42%, var(--line));
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--status-accent) 12%, transparent), transparent 34%),
+    var(--surface-strong);
+  box-shadow: 0 30px 90px rgba(7, 18, 13, 0.34);
+}
+
+.modal-close {
+  position: absolute;
+  top: 0.9rem;
+  inset-inline-end: 0.9rem;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface-strong) 84%, transparent);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.modal-close:hover {
+  border-color: color-mix(in srgb, var(--status-accent) 46%, var(--line));
+  color: var(--status-accent);
+}
+
+.tracking-modal-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+  padding-inline-end: 3rem;
+}
+
+.status-mark {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--status-accent) 38%, var(--line));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--status-accent) 12%, var(--surface-strong));
+  color: var(--status-accent);
+}
+
+.modal-eyebrow {
+  color: var(--status-accent);
+  font-size: 0.84rem;
+  font-weight: 900;
+}
+
+.tracking-modal h3 {
+  margin: 0.2rem 0 0.35rem;
+  font-size: clamp(1.35rem, 3vw, 2rem);
+}
+
+.tracking-modal-head p,
+.status-hero p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.8;
+}
+
+.status-hero {
+  margin-top: 1.2rem;
+  padding: 1rem;
+  border: 1px solid color-mix(in srgb, var(--status-accent) 34%, var(--line));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--status-accent) 10%, transparent);
+}
+
+.status-hero span {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.status-hero strong {
+  display: block;
+  margin: 0.3rem 0 0.45rem;
+  color: var(--status-accent);
+  font-size: clamp(1.25rem, 2.6vw, 1.8rem);
+}
+
+.tracking-modal-details {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+  margin: 1rem 0;
+}
+
+.tracking-modal-details div {
+  min-width: 0;
+  padding: 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 76%, transparent);
+}
+
+.tracking-modal-details dt {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.tracking-modal-details dd {
+  margin: 0.25rem 0 0;
+  color: var(--text);
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+.tracking-modal-steps {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tracking-modal-steps li {
+  display: grid;
+  gap: 0.55rem;
+  align-content: start;
+  min-height: 118px;
+  padding: 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+}
+
+.tracking-modal-steps li > span {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+}
+
+.tracking-modal-steps li.done {
+  border-color: color-mix(in srgb, var(--status-accent) 34%, var(--line));
+}
+
+.tracking-modal-steps li.done > span {
+  border-color: color-mix(in srgb, var(--status-accent) 55%, var(--line));
+  background: color-mix(in srgb, var(--status-accent) 12%, transparent);
+  color: var(--status-accent);
+}
+
+.tracking-modal-steps li.active {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--status-accent) 34%, transparent);
+}
+
+.tracking-modal-steps strong {
+  display: block;
+  font-size: 0.9rem;
+}
+
+.tracking-modal-steps small {
   color: var(--muted);
 }
 
@@ -1047,6 +1234,7 @@ h1 {
 
   .steps,
   .tracking-timeline,
+  .tracking-modal-details,
   .grid.three {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1073,6 +1261,10 @@ h1 {
 
   .tracking-timeline small {
     grid-column: 2;
+  }
+
+  .tracking-modal-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -1112,6 +1304,8 @@ h1 {
   .steps,
   .tracking-form,
   .tracking-timeline,
+  .tracking-modal-details,
+  .tracking-modal-steps,
   .contact-list,
   .grid.two,
   .grid.three,
@@ -1132,6 +1326,24 @@ h1 {
   .tracking-result {
     align-items: flex-start;
     grid-template-columns: 1fr;
+  }
+
+  .tracking-modal {
+    max-height: 92vh;
+  }
+
+  .tracking-modal-head {
+    grid-template-columns: 1fr;
+    padding-inline-end: 2.8rem;
+  }
+
+  .status-mark {
+    width: 50px;
+    height: 50px;
+  }
+
+  .tracking-modal-steps li {
+    min-height: auto;
   }
 
   .upload-drop {

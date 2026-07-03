@@ -1,8 +1,10 @@
 import { motion } from "framer-motion";
 import {
+  AlertTriangle,
   Building2,
   CarFront,
   CheckCircle2,
+  ClipboardList,
   Clock3,
   ExternalLink,
   FileSearch,
@@ -15,8 +17,9 @@ import {
   Phone,
   ShieldCheck,
   Sun,
+  X,
 } from "lucide-react";
-import { type ChangeEvent, useMemo, useState } from "react";
+import { type CSSProperties, type ChangeEvent, useMemo, useState } from "react";
 import { DocumentUpload } from "./components/DocumentUpload";
 import { FloatingField } from "./components/FloatingField";
 import { ProgressSteps } from "./components/ProgressSteps";
@@ -60,6 +63,37 @@ const trackingStatusIndex: Record<PublicMotorRequestStatus, number> = {
   CONTACTING_CUSTOMER: 4,
   COMPLETED: 4,
   REJECTED: 4,
+};
+
+const trackingStatusTheme: Record<PublicMotorRequestStatus, { color: string; name: string }> = {
+  RECEIVED: { color: "#0f8a4b", name: "received" },
+  UNDER_REVIEW: { color: "#1b8b8f", name: "review" },
+  DOCUMENTS_CHECK: { color: "#b7791f", name: "documents" },
+  QUOTE_PREPARATION: { color: "#5b5fc7", name: "quote" },
+  CONTACTING_CUSTOMER: { color: "#2563eb", name: "contact" },
+  COMPLETED: { color: "#15803d", name: "completed" },
+  REJECTED: { color: "#b42318", name: "rejected" },
+};
+
+const trackingStatusDescription: Record<Language, Record<PublicMotorRequestStatus, string>> = {
+  ar: {
+    RECEIVED: "تم استلام الطلب بنجاح وهو الآن ضمن قائمة المتابعة لدى فريق التأمين.",
+    UNDER_REVIEW: "الطلب قيد المراجعة، ويتم تدقيق المعلومات الأساسية قبل الانتقال للخطوة التالية.",
+    DOCUMENTS_CHECK: "الفريق يتحقق من المستندات المرفوعة ويتأكد من وضوحها واكتمالها.",
+    QUOTE_PREPARATION: "يتم تجهيز العرض التأميني المناسب حسب بيانات المركبة والطلب.",
+    CONTACTING_CUSTOMER: "سيتم التواصل معك قريباً لإكمال التفاصيل أو مشاركة العرض.",
+    COMPLETED: "اكتملت معالجة الطلب، ويمكنك التواصل مع فريق الدعم لأي متابعة إضافية.",
+    REJECTED: "تم رفض الطلب. يرجى التواصل مع فريق الدعم لمعرفة السبب والخطوات الممكنة.",
+  },
+  en: {
+    RECEIVED: "Your application was received successfully and is now queued with the insurance team.",
+    UNDER_REVIEW: "The application is under review while the team checks the core details.",
+    DOCUMENTS_CHECK: "Uploaded documents are being checked for clarity and completeness.",
+    QUOTE_PREPARATION: "The insurance quote is being prepared based on the vehicle and request details.",
+    CONTACTING_CUSTOMER: "The team will contact you soon to complete details or share the quote.",
+    COMPLETED: "The application has been completed. Support can help with any additional follow-up.",
+    REJECTED: "The application was rejected. Please contact support for the reason and possible next steps.",
+  },
 };
 
 function App() {
@@ -254,6 +288,14 @@ function App() {
         timeStyle: "short",
       }).format(new Date(trackingLookup.updatedAt))
     : "";
+  const trackingTheme = trackingLookup ? trackingStatusTheme[trackingLookup.status] : trackingStatusTheme.RECEIVED;
+  const trackingThemeStyle = { "--status-accent": trackingTheme.color } as CSSProperties;
+  const trackingDialogTitle = language === "ar" ? "تفاصيل تتبع الطلب" : "Application Tracking Details";
+  const trackingDialogSubtitle =
+    language === "ar"
+      ? "ملخص الحالة الحالية وآخر تفاصيل الطلب المسجلة في النظام."
+      : "A summary of the current status and the latest request details in the system.";
+  const closeTrackingLabel = language === "ar" ? "إغلاق" : "Close";
 
   return (
     <div className={darkMode ? "app dark" : "app"} dir={direction} lang={language}>
@@ -372,41 +414,11 @@ function App() {
 
           {trackingError ? <p className="submit-error" role="alert">{trackingError}</p> : null}
 
-          {trackingLookup ? (
-            <div className="tracking-result" role="status">
-              <div>
-                <span>{t.currentStatus}</span>
-                <strong>{trackingLookup.statusLabel}</strong>
-              </div>
-              <dl className="tracking-details">
-                <div>
-                  <dt>{t.trackingNumber}</dt>
-                  <dd>{trackingLookup.trackingNumber}</dd>
-                </div>
-                <div>
-                  <dt>{t.requestNumber}</dt>
-                  <dd>{trackingLookup.requestNumber}</dd>
-                </div>
-                <div>
-                  <dt>{t.customer}</dt>
-                  <dd>{trackingLookup.customerName}</dd>
-                </div>
-                <div>
-                  <dt>{t.vehicle}</dt>
-                  <dd>{trackingLookup.vehicle}</dd>
-                </div>
-                <div>
-                  <dt>{t.updatedAt}</dt>
-                  <dd>{trackingUpdatedAt}</dd>
-                </div>
-              </dl>
-              <small>
-                {t.statusCode}: {trackingLookup.status}
-              </small>
-            </div>
-          ) : null}
-
-          <ol className="tracking-timeline" aria-label={t.trackTitle}>
+          <ol
+            className={`tracking-timeline status-${trackingTheme.name}`}
+            style={trackingThemeStyle}
+            aria-label={t.trackTitle}
+          >
             {trackingSteps.map((step, index) => {
               const isDone = trackingLookup ? index <= trackingActiveIndex : index === 0;
               const isActive = trackingLookup ? index === trackingActiveIndex : index === 0;
@@ -422,6 +434,94 @@ function App() {
               );
             })}
           </ol>
+
+          {trackingLookup ? (
+            <motion.div
+              className="tracking-modal-backdrop"
+              role="presentation"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onMouseDown={() => setTrackingLookup(null)}
+            >
+              <motion.div
+                className={`tracking-modal status-${trackingTheme.name}`}
+                style={trackingThemeStyle}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="tracking-modal-title"
+                initial={{ opacity: 0, y: 22, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.22 }}
+                onMouseDown={(event) => event.stopPropagation()}
+              >
+                <button className="modal-close" type="button" onClick={() => setTrackingLookup(null)} aria-label={closeTrackingLabel}>
+                  <X size={20} aria-hidden="true" />
+                </button>
+
+                <div className="tracking-modal-head">
+                  <span className="status-mark">
+                    {trackingLookup.status === "REJECTED" ? <AlertTriangle size={26} aria-hidden="true" /> : <ClipboardList size={26} aria-hidden="true" />}
+                  </span>
+                  <div>
+                    <span className="modal-eyebrow">{t.trackEyebrow}</span>
+                    <h3 id="tracking-modal-title">{trackingDialogTitle}</h3>
+                    <p>{trackingDialogSubtitle}</p>
+                  </div>
+                </div>
+
+                <section className="status-hero" aria-label={t.currentStatus}>
+                  <span>{t.currentStatus}</span>
+                  <strong>{trackingLookup.statusLabel}</strong>
+                  <p>{trackingStatusDescription[language][trackingLookup.status]}</p>
+                </section>
+
+                <dl className="tracking-modal-details">
+                  <div>
+                    <dt>{t.trackingNumber}</dt>
+                    <dd>{trackingLookup.trackingNumber}</dd>
+                  </div>
+                  <div>
+                    <dt>{t.requestNumber}</dt>
+                    <dd>{trackingLookup.requestNumber}</dd>
+                  </div>
+                  <div>
+                    <dt>{t.customer}</dt>
+                    <dd>{trackingLookup.customerName}</dd>
+                  </div>
+                  <div>
+                    <dt>{t.vehicle}</dt>
+                    <dd>{trackingLookup.vehicle}</dd>
+                  </div>
+                  <div>
+                    <dt>{t.updatedAt}</dt>
+                    <dd>{trackingUpdatedAt}</dd>
+                  </div>
+                  <div>
+                    <dt>{t.statusCode}</dt>
+                    <dd>{trackingLookup.status}</dd>
+                  </div>
+                </dl>
+
+                <ol className="tracking-modal-steps" aria-label={t.trackTitle}>
+                  {trackingSteps.map((step, index) => {
+                    const isDone = index <= trackingActiveIndex;
+                    const isActive = index === trackingActiveIndex;
+
+                    return (
+                      <li key={step} className={`${isDone ? "done" : ""} ${isActive ? "active" : ""}`}>
+                        <span>{isDone ? <CheckCircle2 size={18} aria-hidden="true" /> : <Clock3 size={17} aria-hidden="true" />}</span>
+                        <div>
+                          <strong>{step}</strong>
+                          <small>{isDone ? t.completed : t.pending}</small>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </motion.div>
+            </motion.div>
+          ) : null}
         </motion.section>
 
         <motion.section id="support" className="support-page" {...sectionAnimation}>
