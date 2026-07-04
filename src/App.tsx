@@ -130,8 +130,8 @@ function App() {
       "engineNumber",
       "estimatedValue",
     ].every((key) => form[key as keyof FormState]),
-    true,
-    true,
+    vehicleImages.length >= 5,
+    documentKeys.every((key) => documents[key]),
     form.notes.trim().length > 0,
     Boolean(requestNumber && trackingNumber),
   ];
@@ -259,6 +259,9 @@ function App() {
         nextErrors[String(issue.path[0])] = issue.message;
       }
     }
+
+    if (vehicleImages.length < 5) nextErrors.vehicleImages = t.imagesMin;
+    if (!documentKeys.every((key) => documents[key])) nextErrors.documents = t.documentsRequired;
 
     setErrors(nextErrors);
 
@@ -600,27 +603,27 @@ function App() {
           <motion.section className="panel" {...sectionAnimation}>
             <h2>{t.customer}</h2>
             <div className="grid two">
-              <FloatingField id="fullName" label={t.fullName} value={form.fullName} error={errors.fullName} onChange={setValue("fullName")} />
-              <FloatingField id="phone" label={t.phone} value={form.phone} error={errors.phone} inputMode="tel" onChange={setValue("phone")} />
+              <FloatingField id="fullName" label={t.fullName} value={form.fullName} error={errors.fullName} required onChange={setValue("fullName")} />
+              <FloatingField id="phone" label={t.phone} value={form.phone} error={errors.phone} required inputMode="tel" onChange={setValue("phone")} />
               <FloatingField id="email" label={t.email} value={form.email} error={errors.email} type="email" onChange={setValue("email")} />
-              <FloatingField id="nationalId" label={t.nationalId} value={form.nationalId} error={errors.nationalId} onChange={setValue("nationalId")} />
-              <FloatingField id="address" label={t.address} value={form.address} error={errors.address} onChange={setValue("address")} />
-              <FloatingField id="city" label={t.city} value={form.city} error={errors.city} onChange={setValue("city")} />
+              <FloatingField id="nationalId" label={t.nationalId} value={form.nationalId} error={errors.nationalId} required onChange={setValue("nationalId")} />
+              <FloatingField id="address" label={t.address} value={form.address} error={errors.address} required onChange={setValue("address")} />
+              <FloatingField id="city" label={t.city} value={form.city} error={errors.city} required onChange={setValue("city")} />
             </div>
           </motion.section>
 
           <motion.section className="panel" {...sectionAnimation}>
             <h2>{t.vehicle}</h2>
             <div className="grid three">
-              <FloatingField id="vehicleType" label={t.vehicleType} value={form.vehicleType} error={errors.vehicleType} onChange={setValue("vehicleType")} />
-              <FloatingField id="manufacturer" label={t.manufacturer} value={form.manufacturer} error={errors.manufacturer} onChange={setValue("manufacturer")} />
-              <FloatingField id="model" label={t.model} value={form.model} error={errors.model} onChange={setValue("model")} />
-              <FloatingField id="year" label={t.year} value={form.year} error={errors.year} inputMode="numeric" onChange={setValue("year")} />
-              <FloatingField id="color" label={t.color} value={form.color} error={errors.color} onChange={setValue("color")} />
-              <FloatingField id="plateNumber" label={t.plateNumber} value={form.plateNumber} error={errors.plateNumber} onChange={setValue("plateNumber")} />
-              <FloatingField id="chassisNumber" label={t.chassisNumber} value={form.chassisNumber} error={errors.chassisNumber} onChange={setValue("chassisNumber")} />
-              <FloatingField id="engineNumber" label={t.engineNumber} value={form.engineNumber} error={errors.engineNumber} onChange={setValue("engineNumber")} />
-              <FloatingField id="estimatedValue" label={t.estimatedValue} value={form.estimatedValue} error={errors.estimatedValue} inputMode="decimal" onChange={setValue("estimatedValue")} />
+              <FloatingField id="vehicleType" label={t.vehicleType} value={form.vehicleType} error={errors.vehicleType} required onChange={setValue("vehicleType")} />
+              <FloatingField id="manufacturer" label={t.manufacturer} value={form.manufacturer} error={errors.manufacturer} required onChange={setValue("manufacturer")} />
+              <FloatingField id="model" label={t.model} value={form.model} error={errors.model} required onChange={setValue("model")} />
+              <FloatingField id="year" label={t.year} value={form.year} error={errors.year} required inputMode="numeric" onChange={setValue("year")} />
+              <FloatingField id="color" label={t.color} value={form.color} error={errors.color} required onChange={setValue("color")} />
+              <FloatingField id="plateNumber" label={t.plateNumber} value={form.plateNumber} error={errors.plateNumber} required onChange={setValue("plateNumber")} />
+              <FloatingField id="chassisNumber" label={t.chassisNumber} value={form.chassisNumber} error={errors.chassisNumber} required onChange={setValue("chassisNumber")} />
+              <FloatingField id="engineNumber" label={t.engineNumber} value={form.engineNumber} error={errors.engineNumber} required onChange={setValue("engineNumber")} />
+              <FloatingField id="estimatedValue" label={t.estimatedValue} value={form.estimatedValue} error={errors.estimatedValue} required inputMode="decimal" onChange={setValue("estimatedValue")} />
             </div>
           </motion.section>
 

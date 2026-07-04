@@ -53,9 +53,7 @@ export type MotorRequestInput = {
   agentCode?: string;
 };
 
-function toOptionalNumber(value: string, fieldName: string) {
-  if (!value.trim()) return undefined;
-
+function toRequiredNumber(value: string, fieldName: string) {
   const numberValue = Number(value);
 
   if (!Number.isFinite(numberValue)) {
@@ -66,8 +64,8 @@ function toOptionalNumber(value: string, fieldName: string) {
 }
 
 function buildPayload({ form, agentCode }: Pick<MotorRequestInput, "form" | "agentCode">) {
-  const manufacturingYear = toOptionalNumber(form.year, "vehicle.manufacturingYear");
-  const estimatedVehicleValue = toOptionalNumber(form.estimatedValue, "vehicle.estimatedVehicleValue");
+  const manufacturingYear = toRequiredNumber(form.year, "vehicle.manufacturingYear");
+  const estimatedVehicleValue = toRequiredNumber(form.estimatedValue, "vehicle.estimatedVehicleValue");
 
   return {
     customer: {
