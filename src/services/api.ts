@@ -29,22 +29,11 @@ function getApiConfig() {
   };
 }
 
-function describeFormData(body: FormData) {
-  return Array.from(body.entries()).map(([key, value]) => {
-    if (value instanceof File) {
-      return {
-        key,
-        fileName: value.name,
-        fileSize: value.size,
-        fileType: value.type,
-      };
-    }
-
-    return { key, value };
-  });
+export function getPublicApiConfig() {
+  return getApiConfig();
 }
 
-export async function postMultipart<TResponse>(path: string, body: FormData): Promise<TResponse> {
+export async function postJson<TResponse>(path: string, body: unknown): Promise<TResponse> {
   try {
     const config = getApiConfig();
     const method = "POST";
@@ -53,16 +42,17 @@ export async function postMultipart<TResponse>(path: string, body: FormData): Pr
     if (isDevelopment) {
       console.log("API URL:", apiUrl);
       console.log("HTTP Method:", method);
-      console.log("Request:", describeFormData(body));
+      console.log("Request:", body);
     }
 
     const response = await fetch(apiUrl, {
       method,
       headers: {
         Accept: "application/json",
+        "Content-Type": "application/json",
         "x-api-key": config.apiKey,
       },
-      body,
+      body: JSON.stringify(body),
       redirect: "manual",
     });
 

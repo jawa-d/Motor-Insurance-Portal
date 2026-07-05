@@ -1,13 +1,16 @@
+import { upload } from "@vercel/blob/client";
 import type { DocumentKey, FormState, UploadFile } from "../types";
-import { getJson, getSameOriginJson, postMultipart } from "./api";
+import { getJson, getPublicApiConfig, getSameOriginJson, postJson } from "./api";
 
-const documentFieldMap: Record<DocumentKey, string> = {
-  frontNationalId: "documents.nationalIdFront",
-  backNationalId: "documents.nationalIdBack",
-  drivingLicense: "documents.drivingLicense",
-  vehicleRegistration: "documents.vehicleRegistration",
-  frontResidenceCard: "documents.residenceCardFront",
-  backResidenceCard: "documents.residenceCardBack",
+const uploadEndpoint = "/api/public/motor-request-uploads";
+
+const documentPayloadKeyMap: Record<DocumentKey, string> = {
+  frontNationalId: "nationalIdFront",
+  backNationalId: "nationalIdBack",
+  drivingLicense: "drivingLicense",
+  vehicleRegistration: "vehicleRegistration",
+  frontResidenceCard: "residenceCardFront",
+  backResidenceCard: "residenceCardBack",
 };
 
 type MotorRequestResponse = {
@@ -53,6 +56,14 @@ export type MotorRequestInput = {
   agentCode?: string;
 };
 
+type UploadedFilePayload = {
+  url: string;
+  pathname: string;
+  filename: string;
+  contentType: string;
+  size: number;
+};
+
 function toRequiredNumber(value: string, fieldName: string) {
   const numberValue = Number(value);
 
@@ -92,6 +103,52 @@ function buildPayload({ form, agentCode }: Pick<MotorRequestInput, "form" | "age
   };
 }
 
+function sanitizeFilename(filename: string) {
+  const cleanFilename = filename
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9._-]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  return cleanFilename || "upload";
+}
+
+function createUploadPath(kind: "vehicle-image" | "document", file: File, documentKey?: DocumentKey) {
+  const randomId = typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const safeFilename = sanitizeFilename(file.name);
+  const directory = documentKey ? `documents/${documentPayloadKeyMap[documentKey]}` : "vehicle-images";
+
+  return `motor-requests/${directory}/${randomId}-${kind}-${safeFilename}`;
+}
+
+async function uploadMotorRequestFile(file: File, kind: "vehicle-image" | "document", documentKey?: DocumentKey): Promise<UploadedFilePayload> {
+  const config = getPublicApiConfig();
+  const blob = await upload(createUploadPath(kind, file, documentKey), file, {
+    access: "public",
+    handleUploadUrl: `${config.baseUrl}${uploadEndpoint}`,
+    headers: {
+      "x-api-key": config.apiKey,
+    },
+    contentType: file.type || "application/octet-stream",
+    clientPayload: JSON.stringify({
+      kind,
+      documentKey,
+      filename: file.name,
+      contentType: file.type || "application/octet-stream",
+      size: file.size,
+    }),
+  });
+
+  return {
+    url: blob.url,
+    pathname: blob.pathname,
+    filename: file.name,
+    contentType: blob.contentType || file.type || "application/octet-stream",
+    size: file.size,
+  };
+}
+
 function extractRequestNumber(response: MotorRequestResponse) {
   return (
     response.requestNumber ??
@@ -111,27 +168,38 @@ function extractTrackingNumber(response: MotorRequestResponse) {
 }
 
 export async function submitMotorRequest(input: MotorRequestInput) {
-  const formData = new FormData();
   const payload = buildPayload(input);
 
   if (import.meta.env.DEV) {
-    console.log("Final Payload:", payload);
+    console.log("Base Payload:", payload);
   }
 
-  formData.append("payload", JSON.stringify(payload));
+  const vehicleImages: UploadedFilePayload[] = [];
 
   for (const image of input.vehicleImages) {
-    formData.append("vehicleImages", image.file, image.file.name);
+    vehicleImages.push(await uploadMotorRequestFile(image.file, "vehicle-image"));
   }
 
-  for (const [key, fieldName] of Object.entries(documentFieldMap) as Array<[DocumentKey, string]>) {
+  const documents: Record<string, UploadedFilePayload> = {};
+
+  for (const [key, payloadKey] of Object.entries(documentPayloadKeyMap) as Array<[DocumentKey, string]>) {
     const document = input.documents[key];
     if (document) {
-      formData.append(fieldName, document.file, document.file.name);
+      documents[payloadKey] = await uploadMotorRequestFile(document.file, "document", key);
     }
   }
 
-  const response = await postMultipart<MotorRequestResponse>("/api/public/motor-requests", formData);
+  const finalPayload = {
+    ...payload,
+    vehicleImages,
+    documents,
+  };
+
+  if (import.meta.env.DEV) {
+    console.log("Final Payload:", finalPayload);
+  }
+
+  const response = await postJson<MotorRequestResponse>("/api/public/motor-requests", finalPayload);
   const trackingNumber = extractTrackingNumber(response);
   const requestNumber = extractRequestNumber(response);
 
