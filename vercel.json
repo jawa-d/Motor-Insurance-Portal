@@ -1,10 +1,6 @@
 {
   "rewrites": [
     {
-      "source": "/api/public/:path*",
-      "destination": "https://travel-system-sigma.vercel.app/api/public/:path*"
-    },
-    {
       "source": "/((?!api/.*).*)",
       "destination": "/index.html"
     }

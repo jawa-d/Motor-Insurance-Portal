@@ -1,4 +1,4 @@
-const apiBaseUrl = import.meta.env.PROD ? "" : import.meta.env.VITE_API_BASE_URL;
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 const apiKey = import.meta.env.VITE_API_KEY;
 const isDevelopment = import.meta.env.DEV;
 
