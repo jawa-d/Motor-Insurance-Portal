@@ -9,6 +9,7 @@ import {
   ExternalLink,
   FileSearch,
   Globe2,
+  Info,
   Mail,
   MapPin,
   MapPinned,
@@ -54,6 +55,8 @@ const supportWhatsApp = [
   { number: "+964 790 612 3541", href: "https://wa.me/9647906123541" },
   { number: "+964 781 104 0003", href: "https://wa.me/9647811040003" },
 ];
+const fallbackFormUrl =
+  "https://docs.google.com/forms/d/e/1FAIpQLSc_xrj87VpZj0VRte-KCnaidxUUIVx1t5brl7NaBVJXRls_qA/viewform?usp=publish-editor";
 
 const trackingStatusIndex: Record<PublicMotorRequestStatus, number> = {
   RECEIVED: 0,
@@ -675,6 +678,17 @@ function App() {
               {isSubmitting ? <span className="spinner" aria-hidden="true" /> : <CheckCircle2 size={20} aria-hidden="true" />}
               {isSubmitting ? t.submitLoading : t.submit}
             </button>
+            <aside className="fallback-card" aria-label="رابط بديل لتقديم طلب تأمين المركبات">
+              <span className="fallback-icon">
+                <Info size={20} aria-hidden="true" />
+              </span>
+              <div className="fallback-content">
+                <p>في حال تعذر إرسال طلب التأمين عبر هذه الصفحة، يمكنك تقديم الطلب من خلال الرابط التالي:</p>
+                <a className="fallback-link" href={fallbackFormUrl} target="_blank" rel="noopener noreferrer">
+                  طلبات تأمين المركبات
+                </a>
+              </div>
+            </aside>
           </motion.section>
 
           {requestNumber && trackingNumber ? (
