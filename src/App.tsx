@@ -27,7 +27,13 @@ import { ProgressSteps } from "./components/ProgressSteps";
 import { UploadZone } from "./components/UploadZone";
 import { translations, type Language } from "./i18n";
 import { ApiError } from "./services/api";
-import { submitMotorRequest, trackMotorRequest, type MotorRequestTracking, type PublicMotorRequestStatus } from "./services/motor-request";
+import {
+  submitMotorRequest,
+  trackMotorRequest,
+  type MotorRequestTracking,
+  type MotorRequestUploadProgress,
+  type PublicMotorRequestStatus,
+} from "./services/motor-request";
 import type { DocumentKey, Errors, FormState, UploadFile } from "./types";
 import { createSchema, initialForm } from "./validation";
 
@@ -114,9 +120,11 @@ function App() {
   const [isTracking, setIsTracking] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<MotorRequestUploadProgress | null>(null);
 
   const t = translations[language];
   const direction = language === "ar" ? "rtl" : "ltr";
+  const isFormLocked = isSubmitting || Boolean(uploadProgress);
 
   const steps = [t.customer, t.vehicle, t.images, t.documents, t.notes, t.submitStep];
   const trackingSteps = [t.trackReceived, t.trackReview, t.trackDocuments, t.trackPricing, t.trackContact];
@@ -243,7 +251,7 @@ function App() {
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (isSubmitting) return;
+    if (isFormLocked) return;
 
     const parsed = schema.safeParse(form);
     const nextErrors: Errors = {};
@@ -265,7 +273,12 @@ function App() {
     if (Object.keys(nextErrors).length === 0) {
       try {
         setIsSubmitting(true);
-        const result = await submitMotorRequest({ form, vehicleImages, documents, agentCode });
+        const result = await submitMotorRequest(
+          { form, vehicleImages, documents, agentCode },
+          {
+            onProgress: setUploadProgress,
+          },
+        );
         resetForm();
         setRequestNumber(result.requestNumber);
         setTrackingNumber(result.trackingNumber);
@@ -273,6 +286,7 @@ function App() {
       } catch (error) {
         setSubmitError(getSubmitErrorMessage(error));
       } finally {
+        setUploadProgress(null);
         setIsSubmitting(false);
       }
     }
@@ -295,7 +309,37 @@ function App() {
   const closeTrackingLabel = language === "ar" ? "إغلاق" : "Close";
 
   return (
-    <div className={darkMode ? "app dark" : "app"} dir={direction} lang={language}>
+    <div className={`${darkMode ? "app dark" : "app"} ${isFormLocked ? "app-busy" : ""}`} dir={direction} lang={language}>
+      {uploadProgress ? (
+        <motion.div
+          className="upload-overlay"
+          role="alertdialog"
+          aria-modal="true"
+          aria-live="assertive"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.24 }}
+        >
+          <motion.div className="upload-overlay-card" initial={{ opacity: 0, y: 18, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.32 }}>
+            <div className="upload-progress-ring" style={{ "--upload-progress": `${uploadProgress.percent * 3.6}deg` } as CSSProperties}>
+              <span>{uploadProgress.percent}%</span>
+            </div>
+            <div className="upload-overlay-copy">
+              <strong>{uploadProgress.phase === "submitting" ? "تم رفع الملفات بنجاح..." : "Uploading your files..."}</strong>
+              <span>{uploadProgress.phase === "submitting" ? "جاري إرسال الطلب..." : `Uploading file ${uploadProgress.currentFile} of ${uploadProgress.totalFiles}...`}</span>
+              <p>
+                يرجى الانتظار...
+                <br />
+                يتم الآن رفع الملفات بشكل آمن.
+              </p>
+              <p>لا تغلق الصفحة ولا تقم بتحديثها حتى يكتمل رفع الطلب.</p>
+            </div>
+            <div className="upload-progress-bar" aria-hidden="true">
+              <span style={{ width: `${uploadProgress.percent}%` }} />
+            </div>
+          </motion.div>
+        </motion.div>
+      ) : null}
       <header className="site-header">
         <a className="brand" href="#top" aria-label={t.brand}>
           <img src="/brand/iraq-takaful-logo.png" alt={t.brand} />
@@ -306,11 +350,11 @@ function App() {
             <Phone size={18} aria-hidden="true" />
             {t.support}
           </a>
-          <button className="icon-button" type="button" onClick={() => setLanguage(language === "ar" ? "en" : "ar")}>
+          <button className="icon-button" type="button" disabled={isFormLocked} onClick={() => setLanguage(language === "ar" ? "en" : "ar")}>
             <Globe2 size={18} aria-hidden="true" />
             {t.language}
           </button>
-          <button className="icon-button" type="button" onClick={() => setDarkMode((value) => !value)}>
+          <button className="icon-button" type="button" disabled={isFormLocked} onClick={() => setDarkMode((value) => !value)}>
             {darkMode ? <Sun size={18} aria-hidden="true" /> : <Moon size={18} aria-hidden="true" />}
             {darkMode ? t.light : t.dark}
           </button>
@@ -403,7 +447,7 @@ function App() {
               required
               onChange={(event) => setTrackingInput(event.target.value)}
             />
-            <button className="submit-button" type="submit" disabled={isTracking}>
+            <button className="submit-button" type="submit" disabled={isTracking || isFormLocked}>
               {isTracking ? <span className="spinner" aria-hidden="true" /> : <MapPinned size={20} aria-hidden="true" />}
               {isTracking ? t.trackingLoading : t.trackButton}
             </button>
@@ -596,8 +640,9 @@ function App() {
 
         <ProgressSteps steps={steps} completed={completed} labels={{ completed: t.completed, pending: t.pending }} />
 
-        <form id="request-form" className="request-form" onSubmit={submit} noValidate>
-          <motion.section className="panel" {...sectionAnimation}>
+        <form id="request-form" className="request-form" onSubmit={submit} noValidate aria-busy={isFormLocked}>
+          <fieldset className="form-fieldset" disabled={isFormLocked}>
+            <motion.section className="panel" {...sectionAnimation}>
             <h2>{t.customer}</h2>
             <div className="grid two">
               <FloatingField id="fullName" label={t.fullName} value={form.fullName} error={errors.fullName} required onChange={setValue("fullName")} />
@@ -691,8 +736,8 @@ function App() {
             </aside>
           </motion.section>
 
-          {requestNumber && trackingNumber ? (
-            <motion.section className="success-panel" role="status" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+            {requestNumber && trackingNumber ? (
+              <motion.section className="success-panel" role="status" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
               <CheckCircle2 size={42} aria-hidden="true" />
               <h2>{t.apiSuccessTitle}</h2>
               <p>{t.successBody}</p>
@@ -702,8 +747,9 @@ function App() {
               <strong>
                 {t.requestNumber}: {requestNumber}
               </strong>
-            </motion.section>
-          ) : null}
+              </motion.section>
+            ) : null}
+          </fieldset>
         </form>
       </main>
     </div>

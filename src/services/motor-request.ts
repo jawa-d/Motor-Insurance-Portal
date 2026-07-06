@@ -56,6 +56,18 @@ export type MotorRequestInput = {
   agentCode?: string;
 };
 
+export type MotorRequestUploadProgress = {
+  completedFiles: number;
+  currentFile: number;
+  totalFiles: number;
+  percent: number;
+  phase: "uploading" | "submitting";
+};
+
+type MotorRequestSubmitOptions = {
+  onProgress?: (progress: MotorRequestUploadProgress) => void;
+};
+
 type UploadedFilePayload = {
   url: string;
   pathname: string;
@@ -220,8 +232,20 @@ function extractTrackingNumber(response: MotorRequestResponse) {
   );
 }
 
-export async function submitMotorRequest(input: MotorRequestInput) {
+export async function submitMotorRequest(input: MotorRequestInput, options: MotorRequestSubmitOptions = {}) {
   const payload = buildPayload(input);
+  const totalFiles = input.vehicleImages.length + Object.keys(documentPayloadKeyMap).filter((key) => input.documents[key as DocumentKey]).length;
+  let completedFiles = 0;
+
+  const reportProgress = (phase: MotorRequestUploadProgress["phase"], currentFile = Math.min(completedFiles + 1, totalFiles)) => {
+    options.onProgress?.({
+      completedFiles,
+      currentFile,
+      totalFiles,
+      percent: totalFiles > 0 ? Math.round((completedFiles / totalFiles) * 100) : 100,
+      phase,
+    });
+  };
 
   if (import.meta.env.DEV) {
     console.log("Base Payload:", payload);
@@ -230,7 +254,10 @@ export async function submitMotorRequest(input: MotorRequestInput) {
   const vehicleImages: SubmittedFilePayload[] = [];
 
   for (const image of input.vehicleImages) {
+    reportProgress("uploading");
     vehicleImages.push(toSubmittedFilePayload(await uploadMotorRequestFile(image.file, "vehicleImage")));
+    completedFiles += 1;
+    reportProgress("uploading", Math.min(completedFiles + 1, totalFiles));
   }
 
   const documents: SubmittedDocumentPayload[] = [];
@@ -238,10 +265,13 @@ export async function submitMotorRequest(input: MotorRequestInput) {
   for (const [key, payloadKey] of Object.entries(documentPayloadKeyMap) as Array<[DocumentKey, string]>) {
     const document = input.documents[key];
     if (document) {
+      reportProgress("uploading");
       documents.push({
         key: payloadKey,
         ...toSubmittedFilePayload(await uploadMotorRequestFile(document.file, "document", payloadKey)),
       });
+      completedFiles += 1;
+      reportProgress("uploading", Math.min(completedFiles + 1, totalFiles));
     }
   }
 
@@ -255,6 +285,7 @@ export async function submitMotorRequest(input: MotorRequestInput) {
     console.log("Final Payload:", finalPayload);
   }
 
+  reportProgress("submitting", totalFiles);
   const response = await postJson<MotorRequestResponse>("/api/public/motor-requests", finalPayload);
   const trackingNumber = extractTrackingNumber(response);
   const requestNumber = extractRequestNumber(response);
