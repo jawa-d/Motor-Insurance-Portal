@@ -12,7 +12,6 @@ type DocumentUploadProps = {
     remove: string;
     selectFile: string;
     fileType: string;
-    fileSize: string;
   };
 };
 

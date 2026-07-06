@@ -75,8 +75,40 @@ type SubmittedDocumentPayload = SubmittedFilePayload & {
   key: string;
 };
 
+const localizedDigitMap: Record<string, string> = {
+  "٠": "0",
+  "١": "1",
+  "٢": "2",
+  "٣": "3",
+  "٤": "4",
+  "٥": "5",
+  "٦": "6",
+  "٧": "7",
+  "٨": "8",
+  "٩": "9",
+  "۰": "0",
+  "۱": "1",
+  "۲": "2",
+  "۳": "3",
+  "۴": "4",
+  "۵": "5",
+  "۶": "6",
+  "۷": "7",
+  "۸": "8",
+  "۹": "9",
+};
+
+function normalizeNumericInput(value: string) {
+  return value
+    .trim()
+    .replace(/[٠-٩۰-۹]/g, (digit) => localizedDigitMap[digit] ?? digit)
+    .replace(/[\u066B\uFF0E]/g, ".")
+    .replace(/[\u066C,_\s\u00A0\u202F]/g, "")
+    .replace(/[^\d.+-]/g, "");
+}
+
 function toRequiredNumber(value: string, fieldName: string) {
-  const numberValue = Number(value);
+  const numberValue = Number(normalizeNumericInput(value));
 
   if (!Number.isFinite(numberValue)) {
     throw new Error(`${fieldName} must be a valid number.`);

@@ -141,7 +141,6 @@ function App() {
     remove: t.remove,
     selectFile: t.selectFile,
     fileType: t.fileType,
-    fileSize: t.fileSize,
   };
 
   const agentCode = useMemo(() => {
@@ -159,11 +158,6 @@ function App() {
     () =>
       createSchema({
         fieldRequired: t.fieldRequired,
-        emailInvalid: t.emailInvalid,
-        phoneInvalid: t.phoneInvalid,
-        yearInvalid: t.yearInvalid,
-        valueInvalid: t.valueInvalid,
-        confirmRequired: t.confirmRequired,
       }),
     [t],
   );

@@ -2,10 +2,11 @@ import { ImagePlus, Replace, Trash2, UploadCloud } from "lucide-react";
 import { useRef, useState } from "react";
 import type { UploadFile } from "../types";
 
-const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
-const maxFileSize = 10 * 1024 * 1024;
+const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/heic", "image/heif"];
+const allowedExtensions = [".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif"];
 const uploadTargetSize = 320 * 1024;
 const uploadMaxDimension = 1400;
+const imageAccept = allowedExtensions.join(",");
 
 type UploadZoneProps = {
   title: string;
@@ -20,7 +21,6 @@ type UploadZoneProps = {
     remove: string;
     selectFile: string;
     fileType: string;
-    fileSize: string;
   };
 };
 
@@ -34,6 +34,8 @@ const canvasToBlob = (canvas: HTMLCanvasElement, quality: number) =>
   new Promise<Blob | null>((resolve) => {
     canvas.toBlob(resolve, "image/webp", quality);
   });
+
+const canCompressInBrowser = (file: File) => ["image/jpeg", "image/jpg", "image/png", "image/webp"].includes(file.type);
 
 const loadImage = (file: File) =>
   new Promise<HTMLImageElement>((resolve, reject) => {
@@ -51,6 +53,8 @@ const loadImage = (file: File) =>
   });
 
 const compressImage = async (file: File) => {
+  if (!canCompressInBrowser(file)) return file;
+
   const image = await loadImage(file);
   const scale = Math.min(1, uploadMaxDimension / Math.max(image.naturalWidth, image.naturalHeight));
   const width = Math.max(1, Math.round(image.naturalWidth * scale));
@@ -90,8 +94,8 @@ export function UploadZone({ title, hint, rule, files, onChange, multiple = true
   const [isProcessing, setIsProcessing] = useState(false);
 
   const validate = (file: File) => {
-    if (!allowedTypes.includes(file.type)) return labels.fileType;
-    if (file.size > maxFileSize) return labels.fileSize;
+    const extension = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
+    if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(extension)) return labels.fileType;
     return null;
   };
 
@@ -173,7 +177,7 @@ export function UploadZone({ title, hint, rule, files, onChange, multiple = true
         <input
           ref={inputRef}
           type="file"
-          accept=".jpg,.jpeg,.png,.webp"
+          accept={imageAccept}
           multiple={multiple}
           onChange={(event) => void addFiles(event.target.files)}
         />
@@ -215,7 +219,7 @@ export function UploadZone({ title, hint, rule, files, onChange, multiple = true
         ref={replaceRef}
         className="hidden-input"
         type="file"
-        accept=".jpg,.jpeg,.png,.webp"
+        accept={imageAccept}
         onChange={(event) => void replaceFile(event.target.files)}
       />
     </div>
