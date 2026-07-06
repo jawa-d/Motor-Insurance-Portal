@@ -64,6 +64,17 @@ type UploadedFilePayload = {
   size: number;
 };
 
+type SubmittedFilePayload = {
+  url: string;
+  name: string;
+  type: string;
+  size: number;
+};
+
+type SubmittedDocumentPayload = SubmittedFilePayload & {
+  key: string;
+};
+
 function toRequiredNumber(value: string, fieldName: string) {
   const numberValue = Number(value);
 
@@ -114,37 +125,47 @@ function sanitizeFilename(filename: string) {
   return cleanFilename || "upload";
 }
 
-function createUploadPath(kind: "vehicle-image" | "document", file: File, documentKey?: DocumentKey) {
+function createUploadPath(file: File) {
   const randomId = typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const safeFilename = sanitizeFilename(file.name);
-  const directory = documentKey ? `documents/${documentPayloadKeyMap[documentKey]}` : "vehicle-images";
 
-  return `motor-requests/${directory}/${randomId}-${kind}-${safeFilename}`;
+  return `public-motor-requests/uploads/${randomId}-${safeFilename}`;
 }
 
-async function uploadMotorRequestFile(file: File, kind: "vehicle-image" | "document", documentKey?: DocumentKey): Promise<UploadedFilePayload> {
+async function uploadMotorRequestFile(file: File, kind: "vehicleImage" | "document", key?: string): Promise<UploadedFilePayload> {
   const config = getPublicApiConfig();
-  const blob = await upload(createUploadPath(kind, file, documentKey), file, {
+  const contentType = file.type || "application/octet-stream";
+  const blob = await upload(createUploadPath(file), file, {
     access: "public",
     handleUploadUrl: `${config.baseUrl}${uploadEndpoint}`,
     headers: {
       "x-api-key": config.apiKey,
     },
-    contentType: file.type || "application/octet-stream",
+    contentType,
     clientPayload: JSON.stringify({
       kind,
-      documentKey,
-      filename: file.name,
-      contentType: file.type || "application/octet-stream",
+      key,
+      name: file.name,
+      type: contentType,
       size: file.size,
     }),
+    multipart: true,
   });
 
   return {
     url: blob.url,
     pathname: blob.pathname,
     filename: file.name,
-    contentType: blob.contentType || file.type || "application/octet-stream",
+    contentType: blob.contentType || contentType,
+    size: file.size,
+  };
+}
+
+function toSubmittedFilePayload(file: UploadedFilePayload): SubmittedFilePayload {
+  return {
+    url: file.url,
+    name: file.filename,
+    type: file.contentType,
     size: file.size,
   };
 }
@@ -174,23 +195,26 @@ export async function submitMotorRequest(input: MotorRequestInput) {
     console.log("Base Payload:", payload);
   }
 
-  const vehicleImages: UploadedFilePayload[] = [];
+  const vehicleImages: SubmittedFilePayload[] = [];
 
   for (const image of input.vehicleImages) {
-    vehicleImages.push(await uploadMotorRequestFile(image.file, "vehicle-image"));
+    vehicleImages.push(toSubmittedFilePayload(await uploadMotorRequestFile(image.file, "vehicleImage")));
   }
 
-  const documents: Record<string, UploadedFilePayload> = {};
+  const documents: SubmittedDocumentPayload[] = [];
 
   for (const [key, payloadKey] of Object.entries(documentPayloadKeyMap) as Array<[DocumentKey, string]>) {
     const document = input.documents[key];
     if (document) {
-      documents[payloadKey] = await uploadMotorRequestFile(document.file, "document", key);
+      documents.push({
+        key: payloadKey,
+        ...toSubmittedFilePayload(await uploadMotorRequestFile(document.file, "document", payloadKey)),
+      });
     }
   }
 
   const finalPayload = {
-    ...payload,
+    payload,
     vehicleImages,
     documents,
   };
