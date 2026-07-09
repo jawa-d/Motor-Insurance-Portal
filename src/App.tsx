@@ -5,7 +5,9 @@ import {
   CarFront,
   CheckCircle2,
   ClipboardList,
+  Copy,
   Clock3,
+  Download,
   ExternalLink,
   FileSearch,
   Globe2,
@@ -114,6 +116,8 @@ function App() {
   const [errors, setErrors] = useState<Errors>({});
   const [requestNumber, setRequestNumber] = useState<string | null>(null);
   const [trackingNumber, setTrackingNumber] = useState<string | null>(null);
+  const [submittedForm, setSubmittedForm] = useState<FormState | null>(null);
+  const [copiedRequestNumber, setCopiedRequestNumber] = useState(false);
   const [trackingInput, setTrackingInput] = useState("");
   const [trackingLookup, setTrackingLookup] = useState<MotorRequestTracking | null>(null);
   const [trackingError, setTrackingError] = useState<string | null>(null);
@@ -229,6 +233,115 @@ function App() {
     setErrors({});
   };
 
+  const copyRequestNumber = async () => {
+    if (!requestNumber) return;
+
+    try {
+      await navigator.clipboard.writeText(requestNumber);
+      setCopiedRequestNumber(true);
+      window.setTimeout(() => setCopiedRequestNumber(false), 1800);
+    } catch {
+      const textarea = document.createElement("textarea");
+      textarea.value = requestNumber;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+      setCopiedRequestNumber(true);
+      window.setTimeout(() => setCopiedRequestNumber(false), 1800);
+    }
+  };
+
+  const downloadRequestPdf = () => {
+    if (!requestNumber || !trackingNumber) return;
+
+    const snapshot = submittedForm ?? form;
+    const submittedAt = new Intl.DateTimeFormat(language === "ar" ? "ar-IQ" : "en", {
+      dateStyle: "full",
+      timeStyle: "short",
+    }).format(new Date());
+    const value = (text: string | boolean | undefined) => (typeof text === "string" && text.trim() ? text : "-");
+    const rows = [
+      [t.requestNumber, requestNumber],
+      [t.trackingNumber, trackingNumber],
+      [language === "ar" ? "حالة الطلب" : "Request status", t.trackReceived],
+      [language === "ar" ? "وقت الإرسال" : "Submitted at", submittedAt],
+      [t.fullName, value(snapshot.fullName)],
+      [t.phone, value(snapshot.phone)],
+      [t.email, value(snapshot.email)],
+      [t.nationalId, value(snapshot.nationalId)],
+      [t.city, value(snapshot.city)],
+      [t.address, value(snapshot.address)],
+      [t.vehicleType, value(snapshot.vehicleType)],
+      [t.manufacturer, value(snapshot.manufacturer)],
+      [t.model, value(snapshot.model)],
+      [t.year, value(snapshot.year)],
+      [t.color, value(snapshot.color)],
+      [t.plateNumber, value(snapshot.plateNumber)],
+      [t.chassisNumber, value(snapshot.chassisNumber)],
+      [t.engineNumber, value(snapshot.engineNumber)],
+      [t.estimatedValue, value(snapshot.estimatedValue)],
+      [t.notes, value(snapshot.notes)],
+    ];
+    const escapeHtml = (text: string) =>
+      text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+    const printable = window.open("", "_blank", "width=900,height=1100");
+
+    if (!printable) return;
+
+    printable.document.write(`<!doctype html>
+<html lang="${language}" dir="${direction}">
+<head>
+  <meta charset="utf-8" />
+  <title>${escapeHtml(t.requestNumber)} ${escapeHtml(requestNumber)}</title>
+  <style>
+    @page { size: A4; margin: 16mm; }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: #14231b; font-family: "Segoe UI", Tahoma, Arial, sans-serif; background: #fff; }
+    .sheet { min-height: 100vh; border: 1px solid #d9e6dc; padding: 24px; }
+    .head { display: flex; justify-content: space-between; gap: 18px; border-bottom: 3px solid #0f8a4b; padding-bottom: 18px; }
+    .brand { color: #0b5d3b; font-size: 22px; font-weight: 900; }
+    .title { margin: 10px 0 0; font-size: 28px; font-weight: 900; }
+    .status { align-self: start; border: 1px solid #bfe3cc; background: #eefaf2; color: #0b5d3b; padding: 12px 16px; border-radius: 8px; font-weight: 900; }
+    .numbers { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 22px 0; }
+    .number { border: 1px solid #d9e6dc; background: #f7fbf8; padding: 14px; border-radius: 8px; }
+    .number span, dt { color: #64736a; font-size: 12px; font-weight: 800; }
+    .number strong { display: block; margin-top: 6px; color: #0b5d3b; font-size: 18px; }
+    h2 { margin: 22px 0 12px; color: #14231b; font-size: 18px; }
+    dl { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 0; }
+    .item { border: 1px solid #e3ece6; padding: 11px 12px; border-radius: 8px; min-height: 66px; }
+    dd { margin: 5px 0 0; font-size: 15px; font-weight: 800; overflow-wrap: anywhere; }
+    .foot { margin-top: 24px; padding-top: 14px; border-top: 1px solid #d9e6dc; color: #64736a; line-height: 1.8; }
+  </style>
+</head>
+<body>
+  <main class="sheet">
+    <section class="head">
+      <div>
+        <div class="brand">${escapeHtml(t.brand)}</div>
+        <div class="title">${escapeHtml(language === "ar" ? "استمارة طلب تأمين مركبة" : "Motor Insurance Application")}</div>
+      </div>
+      <div class="status">${escapeHtml(t.trackReceived)}</div>
+    </section>
+    <section class="numbers">
+      <div class="number"><span>${escapeHtml(t.requestNumber)}</span><strong>${escapeHtml(requestNumber)}</strong></div>
+      <div class="number"><span>${escapeHtml(t.trackingNumber)}</span><strong>${escapeHtml(trackingNumber)}</strong></div>
+    </section>
+    <h2>${escapeHtml(language === "ar" ? "معلومات الإرسال وحالة الطلب" : "Submission and Status")}</h2>
+    <dl>${rows
+      .map(([label, text]) => `<div class="item"><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(String(text))}</dd></div>`)
+      .join("")}</dl>
+    <p class="foot">${escapeHtml(t.successBody)}</p>
+  </main>
+  <script>window.addEventListener("load", () => { window.print(); });</script>
+</body>
+</html>`);
+    printable.document.close();
+  };
+
   const getSubmitErrorMessage = (error: unknown) => {
     if (isDevelopment && error instanceof Error) {
       if (error instanceof ApiError && error.responseBody) {
@@ -279,6 +392,7 @@ function App() {
             onProgress: setUploadProgress,
           },
         );
+        setSubmittedForm(form);
         resetForm();
         setRequestNumber(result.requestNumber);
         setTrackingNumber(result.trackingNumber);
@@ -741,12 +855,31 @@ function App() {
               <CheckCircle2 size={42} aria-hidden="true" />
               <h2>{t.apiSuccessTitle}</h2>
               <p>{t.successBody}</p>
-              <strong>
-                {t.trackingNumber}: {trackingNumber}
-              </strong>
-              <strong>
-                {t.requestNumber}: {requestNumber}
-              </strong>
+              <div className="success-status">
+                <span>{t.currentStatus}</span>
+                <strong>{t.trackReceived}</strong>
+                <p>{trackingStatusDescription[language].RECEIVED}</p>
+              </div>
+              <div className="success-numbers">
+                <div>
+                  <span>{t.trackingNumber}</span>
+                  <strong>{trackingNumber}</strong>
+                </div>
+                <div>
+                  <span>{t.requestNumber}</span>
+                  <strong>{requestNumber}</strong>
+                </div>
+              </div>
+              <div className="success-actions">
+                <button className="ghost-button" type="button" onClick={copyRequestNumber}>
+                  <Copy size={18} aria-hidden="true" />
+                  {copiedRequestNumber ? (language === "ar" ? "تم النسخ" : "Copied") : language === "ar" ? "نسخ رقم الطلب" : "Copy request number"}
+                </button>
+                <button className="submit-button" type="button" onClick={downloadRequestPdf}>
+                  <Download size={18} aria-hidden="true" />
+                  {language === "ar" ? "تنزيل الاستمارة PDF" : "Download PDF form"}
+                </button>
+              </div>
               </motion.section>
             ) : null}
           </fieldset>
