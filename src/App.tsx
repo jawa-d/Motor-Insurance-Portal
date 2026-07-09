@@ -22,7 +22,7 @@ import {
   Sun,
   X,
 } from "lucide-react";
-import { type CSSProperties, type ChangeEvent, useMemo, useState } from "react";
+import { type CSSProperties, type ChangeEvent, useEffect, useMemo, useState } from "react";
 import { DocumentUpload } from "./components/DocumentUpload";
 import { FloatingField } from "./components/FloatingField";
 import { ProgressSteps } from "./components/ProgressSteps";
@@ -65,6 +65,17 @@ const supportWhatsApp = [
 ];
 const fallbackFormUrl =
   "https://docs.google.com/forms/d/e/1FAIpQLSc_xrj87VpZj0VRte-KCnaidxUUIVx1t5brl7NaBVJXRls_qA/viewform?usp=publish-editor";
+
+type Page = "home" | "track" | "support";
+
+const getCurrentPage = (): Page => {
+  const path = window.location.pathname.replace(/\/+$/, "");
+
+  if (path === "/track") return "track";
+  if (path === "/support") return "support";
+
+  return "home";
+};
 
 const trackingStatusIndex: Record<PublicMotorRequestStatus, number> = {
   RECEIVED: 0,
@@ -110,6 +121,7 @@ const trackingStatusDescription: Record<Language, Record<PublicMotorRequestStatu
 function App() {
   const [language, setLanguage] = useState<Language>("ar");
   const [darkMode, setDarkMode] = useState(false);
+  const [page, setPage] = useState<Page>(getCurrentPage);
   const [form, setForm] = useState<FormState>(initialForm);
   const [vehicleImages, setVehicleImages] = useState<UploadFile[]>([]);
   const [documents, setDocuments] = useState<Partial<Record<DocumentKey, UploadFile>>>({});
@@ -129,6 +141,9 @@ function App() {
   const t = translations[language];
   const direction = language === "ar" ? "rtl" : "ltr";
   const isFormLocked = isSubmitting || Boolean(uploadProgress);
+  const showHome = page === "home";
+  const showTrackingPage = page === "track";
+  const showSupportPage = page === "support";
 
   const steps = [t.customer, t.vehicle, t.images, t.documents, t.notes, t.submitStep];
   const trackingSteps = [t.trackReceived, t.trackReview, t.trackDocuments, t.trackPricing, t.trackContact];
@@ -176,6 +191,26 @@ function App() {
       }),
     [t],
   );
+
+  useEffect(() => {
+    const updatePage = () => setPage(getCurrentPage());
+
+    window.addEventListener("popstate", updatePage);
+
+    return () => window.removeEventListener("popstate", updatePage);
+  }, []);
+
+  const navigate = (nextPage: Page) => (event: React.MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    const nextPath = nextPage === "home" ? "/" : `/${nextPage}`;
+
+    if (window.location.pathname !== nextPath) {
+      window.history.pushState({}, "", nextPath);
+    }
+
+    setPage(nextPage);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const setValue = (key: keyof FormState) => (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const value = event.target.type === "checkbox" ? (event.target as HTMLInputElement).checked : event.target.value;
@@ -455,12 +490,12 @@ function App() {
         </motion.div>
       ) : null}
       <header className="site-header">
-        <a className="brand" href="#top" aria-label={t.brand}>
+        <a className="brand" href="/" onClick={navigate("home")} aria-label={t.brand}>
           <img src="/brand/iraq-takaful-logo.png" alt={t.brand} />
           <span>{t.portal}</span>
         </a>
         <div className="header-actions">
-          <a className="icon-button" href="#support">
+          <a className="icon-button" href="/support" onClick={navigate("support")}>
             <Phone size={18} aria-hidden="true" />
             {t.support}
           </a>
@@ -476,6 +511,8 @@ function App() {
       </header>
 
       <main id="top">
+        {showHome ? (
+          <>
         <motion.section
           className="intro-banner"
           initial={{ opacity: 0, y: -18, scale: 0.98 }}
@@ -510,11 +547,11 @@ function App() {
               <CarFront size={20} aria-hidden="true" />
               {t.start}
             </a>
-            <a className="ghost-link" href="#track-request">
+            <a className="ghost-link" href="/track" onClick={navigate("track")}>
               <MapPinned size={20} aria-hidden="true" />
               {t.trackRequest}
             </a>
-            <a className="ghost-link" href="#support">
+            <a className="ghost-link" href="/support" onClick={navigate("support")}>
               <Phone size={20} aria-hidden="true" />
               {t.support}
             </a>
@@ -542,7 +579,10 @@ function App() {
             </div>
           </motion.div>
         </section>
+          </>
+        ) : null}
 
+        {showTrackingPage ? (
         <motion.section id="track-request" className="panel tracking-panel" {...sectionAnimation}>
           <div className="tracking-header">
             <span className="eyebrow">
@@ -678,7 +718,9 @@ function App() {
             </motion.div>
           ) : null}
         </motion.section>
+        ) : null}
 
+        {showSupportPage ? (
         <motion.section id="support" className="support-page" {...sectionAnimation}>
           <div className="support-hero">
             <span className="eyebrow">
@@ -751,7 +793,10 @@ function App() {
             </article>
           </div>
         </motion.section>
+        ) : null}
 
+        {showHome ? (
+          <>
         <ProgressSteps steps={steps} completed={completed} labels={{ completed: t.completed, pending: t.pending }} />
 
         <form id="request-form" className="request-form" onSubmit={submit} noValidate aria-busy={isFormLocked}>
@@ -884,6 +929,8 @@ function App() {
             ) : null}
           </fieldset>
         </form>
+          </>
+        ) : null}
       </main>
     </div>
   );
