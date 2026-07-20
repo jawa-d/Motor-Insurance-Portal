@@ -70,18 +70,11 @@ type Page = "home" | "track" | "support";
 
 const portalNav = [
   { key: "motor", icon: CarFront, active: true },
-  { key: "marine", icon: ShieldCheck, active: false },
-  { key: "contractorsRisk", icon: Building2, active: false },
-  { key: "fireTheft", icon: ShieldCheck, active: false },
-  { key: "civilLiability", icon: ClipboardList, active: false },
-  { key: "personalAccident", icon: ShieldCheck, active: false },
-  { key: "fidelityGuarantee", icon: CheckCircle2, active: false },
-  { key: "cashInSafe", icon: ShieldCheck, active: false },
-  { key: "travel", icon: Globe2, active: false },
-  { key: "workersComp", icon: Building2, active: false },
-  { key: "buildingGlass", icon: Building2, active: false },
+  { key: "engineering", icon: Building2, active: false },
   { key: "health", icon: ShieldCheck, active: false },
   { key: "property", icon: Building2, active: false },
+  { key: "marine", icon: ShieldCheck, active: false },
+  { key: "travel", icon: Globe2, active: false },
 ] as const;
 
 const getCurrentPage = (): Page => {
