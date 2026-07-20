@@ -3,18 +3,7 @@ export type Language = "ar" | "en";
 export const translations = {
   ar: {
     brand: "تكافل العراق للتأمين التكافلي",
-    portal: "بوابة طلبات التأمين",
-    portalNavLabel: "بوابات طلبات التأمين",
-    portalNavTitle: "بوابات",
-    portalTypes: {
-      motor: "سيارات",
-      engineering: "هندسي",
-      health: "صحي",
-      property: "ممتلكات",
-      marine: "بحري",
-      travel: "سفر",
-    },
-    comingSoon: "قريباً",
+    portal: "بوابة طلبات تأمين المركبات",
     headline: "اول شركة تأمين تكافلي في العراق",
     title: "طلب تأمين مركبة",
     subtitle:
@@ -115,18 +104,7 @@ export const translations = {
   },
   en: {
     brand: "Iraq Takaful Insurance",
-    portal: "Insurance Requests Portal",
-    portalNavLabel: "Insurance request portals",
-    portalNavTitle: "Portals",
-    portalTypes: {
-      motor: "Motor",
-      engineering: "Engineering",
-      health: "Health",
-      property: "Property",
-      marine: "Marine",
-      travel: "Travel",
-    },
-    comingSoon: "Soon",
+    portal: "Motor Insurance Portal",
     headline: "Iraq's First Islamic Takaful Insurance Company",
     title: "Motor Insurance Application",
     subtitle:
