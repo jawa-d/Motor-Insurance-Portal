@@ -68,6 +68,15 @@ const fallbackFormUrl =
 
 type Page = "home" | "track" | "support";
 
+const portalNav = [
+  { key: "motor", icon: CarFront, active: true },
+  { key: "engineering", icon: Building2, active: false },
+  { key: "health", icon: ShieldCheck, active: false },
+  { key: "property", icon: Building2, active: false },
+  { key: "marine", icon: ShieldCheck, active: false },
+  { key: "travel", icon: Globe2, active: false },
+] as const;
+
 const getCurrentPage = (): Page => {
   const path = window.location.pathname.replace(/\/+$/, "");
 
@@ -494,6 +503,28 @@ function App() {
           <img src="/brand/iraq-takaful-logo.png" alt={t.brand} />
           <span>{t.portal}</span>
         </a>
+        <nav className="portal-nav" aria-label={t.portalNavLabel}>
+          <strong>{t.portalNavTitle}</strong>
+          <div>
+            {portalNav.map((item) => {
+              const Icon = item.icon;
+              const label = t.portalTypes[item.key];
+
+              return item.active ? (
+                <a key={item.key} className="portal-nav-link active" href="#request-form" aria-current="page">
+                  <Icon size={17} aria-hidden="true" />
+                  {label}
+                </a>
+              ) : (
+                <button key={item.key} className="portal-nav-link" type="button" disabled title={t.comingSoon}>
+                  <Icon size={17} aria-hidden="true" />
+                  {label}
+                  <small>{t.comingSoon}</small>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
         <div className="header-actions">
           <a className="icon-button" href="/support" onClick={navigate("support")}>
             <Phone size={18} aria-hidden="true" />
