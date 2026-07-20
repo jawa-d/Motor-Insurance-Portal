@@ -19,6 +19,13 @@ export const translations = {
     title: "طلب تأمين مركبة",
     subtitle:
       "يمكنك إرسال طلب تأمين مركبتك بسهولة من خلال هذه البوابة. سيقوم فريق تكافل العراق بمراجعة الطلب والتواصل معك في أقرب وقت.",
+    takafulSectionEyebrow: "مبدأ التكافل",
+    takafulSectionTitle: "حماية مشتركة تقوم على التعاون والثقة",
+    takafulSectionBody:
+      "يقوم التأمين التكافلي على مساهمة المشتركين في صندوق واحد للتعاون على تعويض المتضرر عند وقوع الخطر. الفكرة ليست بيع حماية فقط، بل تنظيم مسؤولية مشتركة بإدارة مهنية وشفافية، بحيث تكون المساهمة وسيلة للتكافل وتقليل أثر الخسائر على الأفراد والعوائل والأعمال.",
+    takafulPointShared: "اشتراكات العملاء تدار ضمن صندوق تكافلي مخصص للتعويضات.",
+    takafulPointFair: "تتم مراجعة الطلبات والمطالبات وفق إجراءات واضحة وعادلة.",
+    takafulPointTrusted: "الفريق يتابع البيانات والمرفقات لتقديم حماية مناسبة لكل نوع تأمين.",
     start: "ابدأ الطلب",
     support: "الدعم",
     supportEyebrow: "شركة تكافل العراق للتأمين التكافلي الإسلامي",
@@ -131,6 +138,13 @@ export const translations = {
     title: "Motor Insurance Application",
     subtitle:
       "Submit your vehicle insurance application easily through this portal. Iraq Takaful will review your details and contact you as soon as possible.",
+    takafulSectionEyebrow: "The takaful principle",
+    takafulSectionTitle: "Shared protection built on cooperation and trust",
+    takafulSectionBody:
+      "Takaful insurance is based on participants contributing to a shared fund used to support members when covered losses occur. It is not only a protection product; it is a professionally managed cooperative model designed to reduce the impact of risk on people, families, and businesses.",
+    takafulPointShared: "Customer contributions are managed through a dedicated takaful fund.",
+    takafulPointFair: "Applications and claims follow clear and fair review procedures.",
+    takafulPointTrusted: "The team reviews details and attachments to provide suitable protection for each insurance type.",
     start: "Start Application",
     support: "Support",
     supportEyebrow: "Iraq Takaful Islamic Insurance",

@@ -610,6 +610,35 @@ function App() {
             </div>
           </motion.div>
         </section>
+
+        <motion.section className="takaful-principle" {...sectionAnimation}>
+          <div className="takaful-copy">
+            <span className="eyebrow">
+              <ShieldCheck size={18} aria-hidden="true" />
+              {t.takafulSectionEyebrow}
+            </span>
+            <h2>{t.takafulSectionTitle}</h2>
+            <p>{t.takafulSectionBody}</p>
+            <ul>
+              <li>
+                <CheckCircle2 size={19} aria-hidden="true" />
+                {t.takafulPointShared}
+              </li>
+              <li>
+                <CheckCircle2 size={19} aria-hidden="true" />
+                {t.takafulPointFair}
+              </li>
+              <li>
+                <CheckCircle2 size={19} aria-hidden="true" />
+                {t.takafulPointTrusted}
+              </li>
+            </ul>
+          </div>
+          <figure className="takaful-image">
+            <img src="/brand/takaful-principle.png" alt={t.takafulSectionTitle} />
+          </figure>
+        </motion.section>
+
           </>
         ) : null}
 
