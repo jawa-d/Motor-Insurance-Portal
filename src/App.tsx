@@ -696,6 +696,9 @@ function App() {
                 هذه الاستمارة مخصصة لجمع بيانات مقدم الطلب، النشاط، التغطية المطلوبة، والسجل التأميني السابق قبل مراجعتها من فريق تكافل العراق.
               </p>
             </div>
+            <figure className="portal-hero-image">
+              <img src="/brand/portals/civil-liability.png" alt="استمارة طلب تأمين مسؤولية مدنية" />
+            </figure>
 
             <form className="civil-form" onSubmit={(event) => event.preventDefault()}>
               <section className="panel civil-section">
@@ -881,6 +884,9 @@ function App() {
                 هذه الاستمارة مخصصة لجمع البيانات الشخصية وتفاصيل الرحلة والتغطية المطلوبة قبل مراجعتها من فريق تكافل العراق.
               </p>
             </div>
+            <figure className="portal-hero-image">
+              <img src="/brand/portals/travel.png" alt="استمارة طلب تأمين سفر" />
+            </figure>
 
             <form className="civil-form" onSubmit={(event) => event.preventDefault()}>
               <section className="panel civil-section">
@@ -1026,6 +1032,9 @@ function App() {
                 هذه الاستمارة مخصصة لتسجيل بيانات المؤمن له وتفاصيل المبنى والزجاج المطلوب تأمينه قبل مراجعة الطلب.
               </p>
             </div>
+            <figure className="portal-hero-image">
+              <img src="/brand/portals/building-glass.png" alt="استمارة طلب تأمين زجاج المباني" />
+            </figure>
 
             <form className="civil-form" onSubmit={(event) => event.preventDefault()}>
               <section className="panel civil-section">
@@ -1166,6 +1175,9 @@ function App() {
                 هذه الاستمارة مخصصة لتقييم طلب تغطية خيانة الأمانة للموظفين، وتشمل بيانات المنشأة، نوع الوثيقة، تفاصيل الموظفين، وأنظمة الرقابة الداخلية.
               </p>
             </div>
+            <figure className="portal-hero-image">
+              <img src="/brand/portals/fidelity-guarantee.png" alt="استمارة طلب تأمين خيانة الأمانة" />
+            </figure>
 
             <form className="civil-form" onSubmit={(event) => event.preventDefault()}>
               <section className="panel civil-section">
@@ -1349,6 +1361,9 @@ function App() {
                 هذه الاستمارة مخصصة لتقييم تغطية النقد المحتفظ به داخل الخزنة، وتفاصيل الخزنة، أنظمة الحماية، والخسائر أو الوثائق السابقة.
               </p>
             </div>
+            <figure className="portal-hero-image">
+              <img src="/brand/portals/cash-in-safe.png" alt="استمارة طلب تأمين حفظ النقد" />
+            </figure>
 
             <form className="civil-form" onSubmit={(event) => event.preventDefault()}>
               <section className="panel civil-section">
@@ -1549,6 +1564,9 @@ function App() {
                 هذه الاستمارة مخصصة لتقييم مشروع المقاولات، مبالغ التأمين المطلوبة، المخاطر الفنية، والتغطيات الإضافية قبل إصدار العرض التأميني.
               </p>
             </div>
+            <figure className="portal-hero-image">
+              <img src="/brand/portals/contractors-risk.png" alt="استمارة طلب تأمين جميع أخطار المقاولين" />
+            </figure>
 
             <form className="civil-form" onSubmit={(event) => event.preventDefault()}>
               <section className="panel civil-section">
@@ -1723,6 +1741,9 @@ function App() {
                 هذه الاستمارة مخصصة لتقييم بيانات مقدم الطلب، طبيعة العمل، التغطيات المطلوبة، الحالة الصحية، وأي وثائق أو طلبات سابقة.
               </p>
             </div>
+            <figure className="portal-hero-image">
+              <img src="/brand/portals/personal-accident.png" alt="استمارة طلب تأمين الحوادث الشخصية" />
+            </figure>
 
             <form className="civil-form" onSubmit={(event) => event.preventDefault()}>
               <section className="panel civil-section">
@@ -1869,6 +1890,9 @@ function App() {
                 هذه الاستمارة مخصصة لتقييم بيانات صاحب العمل، فئات العمال المؤمن عليهم، التغطية المطلوبة، طبيعة موقع العمل، والمطالبات السابقة.
               </p>
             </div>
+            <figure className="portal-hero-image">
+              <img src="/brand/portals/workers-comp.png" alt="استمارة طلب تأمين إصابات العمال" />
+            </figure>
 
             <form className="civil-form" onSubmit={(event) => event.preventDefault()}>
               <section className="panel civil-section">

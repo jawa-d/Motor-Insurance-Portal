@@ -1152,6 +1152,22 @@ h1 {
   line-height: 1.9;
 }
 
+.portal-hero-image {
+  overflow: hidden;
+  margin: 0;
+  border: 1px solid color-mix(in srgb, var(--gold) 30%, var(--line));
+  border-radius: 8px;
+  background: var(--surface-strong);
+  box-shadow: var(--shadow);
+}
+
+.portal-hero-image img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
 .civil-form {
   display: grid;
   gap: 1.25rem;
