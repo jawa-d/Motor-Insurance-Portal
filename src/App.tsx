@@ -66,20 +66,31 @@ const supportWhatsApp = [
 const fallbackFormUrl =
   "https://docs.google.com/forms/d/e/1FAIpQLSc_xrj87VpZj0VRte-KCnaidxUUIVx1t5brl7NaBVJXRls_qA/viewform?usp=publish-editor";
 
-type Page = "home" | "track" | "support";
+type Page =
+  | "home"
+  | "track"
+  | "support"
+  | "civil-liability"
+  | "travel"
+  | "building-glass"
+  | "fidelity-guarantee"
+  | "cash-in-safe"
+  | "contractors-risk"
+  | "personal-accident"
+  | "workers-comp";
 
 const portalNav = [
-  { key: "motor", icon: CarFront, active: true },
+  { key: "motor", icon: CarFront, page: "home" },
   { key: "marine", icon: ShieldCheck, active: false },
-  { key: "contractorsRisk", icon: Building2, active: false },
+  { key: "contractorsRisk", icon: Building2, page: "contractors-risk" },
   { key: "fireTheft", icon: ShieldCheck, active: false },
-  { key: "civilLiability", icon: ClipboardList, active: false },
-  { key: "personalAccident", icon: ShieldCheck, active: false },
-  { key: "fidelityGuarantee", icon: CheckCircle2, active: false },
-  { key: "cashInSafe", icon: ShieldCheck, active: false },
-  { key: "travel", icon: Globe2, active: false },
-  { key: "workersComp", icon: Building2, active: false },
-  { key: "buildingGlass", icon: Building2, active: false },
+  { key: "civilLiability", icon: ClipboardList, page: "civil-liability" },
+  { key: "personalAccident", icon: ShieldCheck, page: "personal-accident" },
+  { key: "fidelityGuarantee", icon: CheckCircle2, page: "fidelity-guarantee" },
+  { key: "cashInSafe", icon: ShieldCheck, page: "cash-in-safe" },
+  { key: "travel", icon: Globe2, page: "travel" },
+  { key: "workersComp", icon: Building2, page: "workers-comp" },
+  { key: "buildingGlass", icon: Building2, page: "building-glass" },
   { key: "health", icon: ShieldCheck, active: false },
   { key: "property", icon: Building2, active: false },
 ] as const;
@@ -89,6 +100,14 @@ const getCurrentPage = (): Page => {
 
   if (path === "/track") return "track";
   if (path === "/support") return "support";
+  if (path === "/civil-liability") return "civil-liability";
+  if (path === "/travel") return "travel";
+  if (path === "/building-glass") return "building-glass";
+  if (path === "/fidelity-guarantee") return "fidelity-guarantee";
+  if (path === "/cash-in-safe") return "cash-in-safe";
+  if (path === "/contractors-risk") return "contractors-risk";
+  if (path === "/personal-accident") return "personal-accident";
+  if (path === "/workers-comp") return "workers-comp";
 
   return "home";
 };
@@ -160,6 +179,14 @@ function App() {
   const showHome = page === "home";
   const showTrackingPage = page === "track";
   const showSupportPage = page === "support";
+  const showCivilLiabilityPage = page === "civil-liability";
+  const showTravelPage = page === "travel";
+  const showBuildingGlassPage = page === "building-glass";
+  const showFidelityGuaranteePage = page === "fidelity-guarantee";
+  const showCashInSafePage = page === "cash-in-safe";
+  const showContractorsRiskPage = page === "contractors-risk";
+  const showPersonalAccidentPage = page === "personal-accident";
+  const showWorkersCompPage = page === "workers-comp";
 
   const steps = [t.customer, t.vehicle, t.images, t.documents, t.notes, t.submitStep];
   const trackingSteps = [t.trackReceived, t.trackReview, t.trackDocuments, t.trackPricing, t.trackContact];
@@ -516,9 +543,17 @@ function App() {
             {portalNav.map((item) => {
               const Icon = item.icon;
               const label = t.portalTypes[item.key];
+              const isLinkedPortal = "page" in item;
+              const isCurrentPortal = isLinkedPortal && item.page === page;
 
-              return item.active ? (
-                <a key={item.key} className="portal-nav-link active" href="#request-form" aria-current="page">
+              return isLinkedPortal ? (
+                <a
+                  key={item.key}
+                  className={`portal-nav-link ${isCurrentPortal ? "active" : ""}`}
+                  href={item.page === "home" ? "/" : `/${item.page}`}
+                  onClick={navigate(item.page)}
+                  aria-current={isCurrentPortal ? "page" : undefined}
+                >
                   <Icon size={17} aria-hidden="true" />
                   {label}
                 </a>
@@ -647,6 +682,1338 @@ function App() {
         </motion.section>
 
           </>
+        ) : null}
+
+        {showCivilLiabilityPage ? (
+          <motion.section className="civil-page" {...sectionAnimation}>
+            <div className="civil-header">
+              <span className="eyebrow">
+                <ClipboardList size={18} aria-hidden="true" />
+                بوابة طلبات التأمين
+              </span>
+              <h1>استمارة طلب تأمين مسؤولية مدنية</h1>
+              <p>
+                هذه الاستمارة مخصصة لجمع بيانات مقدم الطلب، النشاط، التغطية المطلوبة، والسجل التأميني السابق قبل مراجعتها من فريق تكافل العراق.
+              </p>
+            </div>
+
+            <form className="civil-form" onSubmit={(event) => event.preventDefault()}>
+              <section className="panel civil-section">
+                <h2>1. معلومات مقدم الطلب</h2>
+                <div className="grid two">
+                  <label className="civil-field">
+                    <span>الاسم الكامل / اسم الشركة</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>الصفة</span>
+                    <select defaultValue="">
+                      <option value="" disabled>اختر الصفة</option>
+                      <option>فرد</option>
+                      <option>شركة</option>
+                      <option>مؤسسة</option>
+                    </select>
+                  </label>
+                  <label className="civil-field">
+                    <span>رقم الهوية / السجل التجاري</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>الجنسية</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>تاريخ الميلاد / التأسيس</span>
+                    <input type="date" />
+                  </label>
+                  <label className="civil-field">
+                    <span>رقم الهاتف</span>
+                    <input type="tel" />
+                  </label>
+                  <label className="civil-field">
+                    <span>البريد الإلكتروني</span>
+                    <input type="email" />
+                  </label>
+                  <label className="civil-field">
+                    <span>الشارع</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>المدينة</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>الرمز البريدي</span>
+                    <input type="text" />
+                  </label>
+                </div>
+              </section>
+
+              <section className="panel civil-section">
+                <h2>2. تفاصيل النشاط أو العمل</h2>
+                <div className="grid three">
+                  <label className="civil-field">
+                    <span>نوع النشاط التجاري أو المهني</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>مدة مزاولة النشاط</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>عدد الموظفين</span>
+                    <input type="number" min="0" />
+                  </label>
+                </div>
+                <fieldset className="civil-choice">
+                  <legend>هل هناك أنشطة عالية الخطورة؟</legend>
+                  <label><input type="radio" name="high-risk" /> نعم</label>
+                  <label><input type="radio" name="high-risk" /> لا</label>
+                </fieldset>
+                <label className="civil-field">
+                  <span>إذا كانت الإجابة نعم، يرجى التفصيل</span>
+                  <textarea rows={4} />
+                </label>
+              </section>
+
+              <section className="panel civil-section">
+                <h2>3. تفاصيل التغطية المطلوبة</h2>
+                <fieldset className="civil-checks">
+                  <legend>نوع المسؤولية المراد تغطيتها</legend>
+                  <label><input type="checkbox" /> مسؤولية مدنية عامة</label>
+                  <label><input type="checkbox" /> مسؤولية أصحاب المهن (طبية / قانونية / هندسية...)</label>
+                  <label><input type="checkbox" /> مسؤولية المنتج</label>
+                  <label><input type="checkbox" /> مسؤولية أصحاب العمل</label>
+                  <label><input type="checkbox" /> أخرى</label>
+                </fieldset>
+                <div className="grid two">
+                  <label className="civil-field">
+                    <span>أخرى، يرجى التحديد</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>حد التغطية لكل حادث</span>
+                    <input type="text" inputMode="decimal" />
+                  </label>
+                  <label className="civil-field">
+                    <span>حد التغطية في المجمل سنوياً</span>
+                    <input type="text" inputMode="decimal" />
+                  </label>
+                  <label className="civil-field">
+                    <span>تاريخ بدء التغطية المطلوبة</span>
+                    <input type="date" />
+                  </label>
+                  <label className="civil-field">
+                    <span>مدة التغطية (عدد الأشهر أو السنوات)</span>
+                    <input type="text" />
+                  </label>
+                </div>
+              </section>
+
+              <section className="panel civil-section">
+                <h2>4. السجل التأميني السابق</h2>
+                <fieldset className="civil-choice">
+                  <legend>هل لديك تأمين حالي؟</legend>
+                  <label><input type="radio" name="current-insurance" /> نعم</label>
+                  <label><input type="radio" name="current-insurance" /> لا</label>
+                </fieldset>
+                <div className="grid three">
+                  <label className="civil-field">
+                    <span>اسم شركة التأمين</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>رقم الوثيقة</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>تاريخ الانتهاء</span>
+                    <input type="date" />
+                  </label>
+                </div>
+                <fieldset className="civil-choice">
+                  <legend>هل سبق وتم رفض طلب تأمين أو إلغاؤه أو عدم تجديده؟</legend>
+                  <label><input type="radio" name="declined-policy" /> نعم</label>
+                  <label><input type="radio" name="declined-policy" /> لا</label>
+                </fieldset>
+                <label className="civil-field">
+                  <span>إذا كانت الإجابة نعم، يرجى التوضيح</span>
+                  <textarea rows={3} />
+                </label>
+                <fieldset className="civil-choice">
+                  <legend>هل كانت هناك أي مطالبات سابقة خلال السنوات الخمس الماضية؟</legend>
+                  <label><input type="radio" name="previous-claims" /> نعم</label>
+                  <label><input type="radio" name="previous-claims" /> لا</label>
+                </fieldset>
+                <label className="civil-field">
+                  <span>تفاصيل المطالبات السابقة (التواريخ، الأسباب، المبالغ المدفوعة)</span>
+                  <textarea rows={5} />
+                </label>
+              </section>
+
+              <section className="panel civil-section">
+                <h2>5. إقرار مقدم الطلب</h2>
+                <label className="civil-declaration">
+                  <input type="checkbox" />
+                  <span>
+                    أقر بأن جميع المعلومات المذكورة أعلاه صحيحة وكاملة حسب علمي، وأفهم أن أي معلومات غير دقيقة قد تؤثر على صلاحية وثيقة التأمين أو المطالبات المتعلقة بها.
+                  </span>
+                </label>
+                <p className="api-note">هذه البوابة جاهزة كواجهة أولية، وسيتم تفعيل الإرسال بعد ربط API الخاص بطلبات المسؤولية المدنية.</p>
+                <button className="submit-button" type="submit" disabled>
+                  <ClipboardList size={20} aria-hidden="true" />
+                  إرسال الطلب
+                </button>
+              </section>
+            </form>
+          </motion.section>
+        ) : null}
+
+        {showTravelPage ? (
+          <motion.section className="civil-page" {...sectionAnimation}>
+            <div className="civil-header">
+              <span className="eyebrow">
+                <Globe2 size={18} aria-hidden="true" />
+                بوابة طلبات التأمين
+              </span>
+              <h1>استمارة طلب تأمين سفر</h1>
+              <p>
+                هذه الاستمارة مخصصة لجمع البيانات الشخصية وتفاصيل الرحلة والتغطية المطلوبة قبل مراجعتها من فريق تكافل العراق.
+              </p>
+            </div>
+
+            <form className="civil-form" onSubmit={(event) => event.preventDefault()}>
+              <section className="panel civil-section">
+                <h2>1. البيانات الشخصية</h2>
+                <div className="grid two">
+                  <label className="civil-field">
+                    <span>الاسم الكامل</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>الجنسية</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>رقم الهوية / جواز السفر</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>تاريخ الميلاد</span>
+                    <input type="date" />
+                  </label>
+                  <label className="civil-field">
+                    <span>العنوان</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>رقم الهاتف</span>
+                    <input type="tel" />
+                  </label>
+                  <label className="civil-field">
+                    <span>البريد الإلكتروني</span>
+                    <input type="email" />
+                  </label>
+                </div>
+              </section>
+
+              <section className="panel civil-section">
+                <h2>2. تفاصيل الرحلة</h2>
+                <div className="grid two">
+                  <label className="civil-field">
+                    <span>وجهة السفر</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>تاريخ بدء السفر</span>
+                    <input type="date" />
+                  </label>
+                  <label className="civil-field">
+                    <span>تاريخ العودة</span>
+                    <input type="date" />
+                  </label>
+                  <label className="civil-field">
+                    <span>المدة الإجمالية للسفر / أيام</span>
+                    <input type="number" min="1" />
+                  </label>
+                </div>
+                <fieldset className="civil-checks">
+                  <legend>الغرض من السفر</legend>
+                  <label><input type="checkbox" /> سياحة</label>
+                  <label><input type="checkbox" /> عمل</label>
+                  <label><input type="checkbox" /> دراسة</label>
+                  <label><input type="checkbox" /> علاج</label>
+                  <label><input type="checkbox" /> أخرى</label>
+                </fieldset>
+                <label className="civil-field">
+                  <span>أخرى، يرجى التحديد</span>
+                  <input type="text" />
+                </label>
+              </section>
+
+              <section className="panel civil-section">
+                <h2>3. تفاصيل التغطية التأمينية المطلوبة</h2>
+                <fieldset className="civil-checks">
+                  <legend>نوع التغطية</legend>
+                  <label><input type="checkbox" /> طبية فقط</label>
+                  <label><input type="checkbox" /> شاملة (طبية، فقدان أمتعة، إلغاء سفر، مسؤولية مدنية...)</label>
+                </fieldset>
+                <div className="grid two">
+                  <label className="civil-field">
+                    <span>المبلغ المطلوب للتغطية (اختياري)</span>
+                    <input type="text" inputMode="decimal" />
+                  </label>
+                  <label className="civil-field">
+                    <span>عملة التغطية</span>
+                    <select defaultValue="">
+                      <option value="" disabled>اختر العملة</option>
+                      <option>USD</option>
+                      <option>EUR</option>
+                    </select>
+                  </label>
+                </div>
+                <fieldset className="civil-choice">
+                  <legend>هل لديك أي أمراض مزمنة؟</legend>
+                  <label><input type="radio" name="chronic-disease" /> نعم</label>
+                  <label><input type="radio" name="chronic-disease" /> لا</label>
+                </fieldset>
+                <label className="civil-field">
+                  <span>إذا كانت الإجابة نعم، يرجى التوضيح</span>
+                  <textarea rows={4} />
+                </label>
+              </section>
+
+              <section className="panel civil-section">
+                <h2>4. معلومات إضافية</h2>
+                <fieldset className="civil-choice">
+                  <legend>هل سبق لك الحصول على تأمين سفر؟</legend>
+                  <label><input type="radio" name="previous-travel-insurance" /> نعم</label>
+                  <label><input type="radio" name="previous-travel-insurance" /> لا</label>
+                </fieldset>
+                <label className="civil-field">
+                  <span>اسم شركة التأمين السابقة (إن وجد)</span>
+                  <input type="text" />
+                </label>
+              </section>
+
+              <section className="panel civil-section">
+                <h2>5. الإقرار والتوقيع</h2>
+                <label className="civil-declaration">
+                  <input type="checkbox" />
+                  <span>
+                    أقر أنا الموقع أدناه بأن جميع المعلومات المذكورة أعلاه صحيحة وكاملة حسب علمي، وأوافق على الشروط والأحكام الخاصة بتأمين السفر.
+                  </span>
+                </label>
+                <p className="api-note">هذه البوابة جاهزة كواجهة أولية، وسيتم تفعيل الإرسال بعد ربط API الخاص بطلبات تأمين السفر.</p>
+                <button className="submit-button" type="submit" disabled>
+                  <Globe2 size={20} aria-hidden="true" />
+                  إرسال الطلب
+                </button>
+              </section>
+            </form>
+          </motion.section>
+        ) : null}
+
+        {showBuildingGlassPage ? (
+          <motion.section className="civil-page" {...sectionAnimation}>
+            <div className="civil-header">
+              <span className="eyebrow">
+                <Building2 size={18} aria-hidden="true" />
+                Glass Insurance Application Form
+              </span>
+              <h1>استمارة طلب تأمين زجاج المباني</h1>
+              <p>
+                هذه الاستمارة مخصصة لتسجيل بيانات المؤمن له وتفاصيل المبنى والزجاج المطلوب تأمينه قبل مراجعة الطلب.
+              </p>
+            </div>
+
+            <form className="civil-form" onSubmit={(event) => event.preventDefault()}>
+              <section className="panel civil-section">
+                <h2>1. البيانات العامة للمؤمن له</h2>
+                <div className="grid two">
+                  <label className="civil-field">
+                    <span>الاسم الكامل / اسم الشركة</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>رقم الهوية / السجل التجاري</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>العنوان</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>رقم الهاتف</span>
+                    <input type="tel" />
+                  </label>
+                  <label className="civil-field">
+                    <span>البريد الإلكتروني</span>
+                    <input type="email" />
+                  </label>
+                </div>
+              </section>
+
+              <section className="panel civil-section">
+                <h2>2. تفاصيل المبنى المراد التأمين عليه</h2>
+                <label className="civil-field">
+                  <span>عنوان المبنى</span>
+                  <input type="text" />
+                </label>
+                <fieldset className="civil-checks">
+                  <legend>نوع المبنى</legend>
+                  <label><input type="checkbox" /> سكني</label>
+                  <label><input type="checkbox" /> تجاري</label>
+                  <label><input type="checkbox" /> إداري</label>
+                  <label><input type="checkbox" /> آخر</label>
+                </fieldset>
+                <div className="grid two">
+                  <label className="civil-field">
+                    <span>آخر، يرجى التحديد</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>عدد الطوابق</span>
+                    <input type="number" min="0" />
+                  </label>
+                  <label className="civil-field">
+                    <span>سنة البناء</span>
+                    <input type="number" min="1900" />
+                  </label>
+                  <label className="civil-field">
+                    <span>مبلغ التأمين</span>
+                    <input type="text" inputMode="decimal" />
+                  </label>
+                </div>
+                <fieldset className="civil-choice">
+                  <legend>هل المبنى مستأجر أم مملوك؟</legend>
+                  <label><input type="radio" name="building-ownership" /> مملوك</label>
+                  <label><input type="radio" name="building-ownership" /> مستأجر</label>
+                </fieldset>
+              </section>
+
+              <section className="panel civil-section">
+                <h2>3. تفاصيل الزجاج المطلوب تأمينه</h2>
+                <div className="glass-table" role="group" aria-label="تفاصيل الزجاج المطلوب تأمينه">
+                  <div className="glass-table-head">
+                    <span>الموقع</span>
+                    <span>عدد القطع</span>
+                    <span>الأبعاد (الطول × العرض بالمتر)</span>
+                    <span>نوع الزجاج</span>
+                    <span>القيمة التقديرية</span>
+                  </div>
+                  {[1, 2, 3].map((row) => (
+                    <div className="glass-table-row" key={row}>
+                      <input aria-label={`الموقع ${row}`} type="text" />
+                      <input aria-label={`عدد القطع ${row}`} type="number" min="0" />
+                      <input aria-label={`الأبعاد ${row}`} type="text" />
+                      <input aria-label={`نوع الزجاج ${row}`} type="text" />
+                      <input aria-label={`القيمة التقديرية ${row}`} type="text" inputMode="decimal" />
+                    </div>
+                  ))}
+                </div>
+                <fieldset className="civil-choice">
+                  <legend>هل الزجاج مزود بطبقة حماية أو معالجة خاصة؟</legend>
+                  <label><input type="radio" name="glass-protection" /> نعم</label>
+                  <label><input type="radio" name="glass-protection" /> لا</label>
+                </fieldset>
+                <label className="civil-field">
+                  <span>إذا كانت الإجابة نعم، يرجى التوضيح</span>
+                  <textarea rows={3} />
+                </label>
+                <fieldset className="civil-choice">
+                  <legend>هل سبق وأن تم كسر زجاج في هذا المبنى خلال السنوات الثلاث الماضية؟</legend>
+                  <label><input type="radio" name="previous-glass-break" /> نعم</label>
+                  <label><input type="radio" name="previous-glass-break" /> لا</label>
+                </fieldset>
+                <label className="civil-field">
+                  <span>إذا كانت الإجابة نعم، يرجى ذكر التفاصيل</span>
+                  <textarea rows={5} />
+                </label>
+                <label className="civil-field">
+                  <span>مدة التأمين المطلوبة</span>
+                  <input type="text" />
+                </label>
+              </section>
+
+              <section className="panel civil-section">
+                <h2>4. تصريحات صاحب الطلب</h2>
+                <label className="civil-declaration">
+                  <input type="checkbox" />
+                  <span>
+                    أصرح بأن جميع البيانات المدونة أعلاه صحيحة وكاملة حسب علمي، وأوافق على شروط وأحكام شركة التأمين.
+                  </span>
+                </label>
+                <p className="api-note">هذه البوابة جاهزة كواجهة أولية، وسيتم تفعيل الإرسال بعد ربط API الخاص بطلبات تأمين زجاج المباني.</p>
+                <button className="submit-button" type="submit" disabled>
+                  <Building2 size={20} aria-hidden="true" />
+                  إرسال الطلب
+                </button>
+              </section>
+            </form>
+          </motion.section>
+        ) : null}
+
+        {showFidelityGuaranteePage ? (
+          <motion.section className="civil-page" {...sectionAnimation}>
+            <div className="civil-header">
+              <span className="eyebrow">
+                <CheckCircle2 size={18} aria-hidden="true" />
+                Fidelity Guarantee Insurance Proposal Form
+              </span>
+              <h1>استمارة طلب تأمين خيانة الأمانة</h1>
+              <p>
+                هذه الاستمارة مخصصة لتقييم طلب تغطية خيانة الأمانة للموظفين، وتشمل بيانات المنشأة، نوع الوثيقة، تفاصيل الموظفين، وأنظمة الرقابة الداخلية.
+              </p>
+            </div>
+
+            <form className="civil-form" onSubmit={(event) => event.preventDefault()}>
+              <section className="panel civil-section">
+                <h2>1. معلومات مقدم الطلب (المؤمن له)</h2>
+                <div className="grid two">
+                  <label className="civil-field">
+                    <span>اسم الشركة / المؤسسة</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>النشاط التجاري</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>رقم السجل التجاري</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>العنوان</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>رقم الهاتف</span>
+                    <input type="tel" />
+                  </label>
+                  <label className="civil-field">
+                    <span>البريد الإلكتروني</span>
+                    <input type="email" />
+                  </label>
+                </div>
+              </section>
+
+              <section className="panel civil-section">
+                <h2>2. نوع الوثيقة المطلوبة</h2>
+                <fieldset className="civil-checks">
+                  <legend>يرجى وضع اختيار أمام النوع المناسب</legend>
+                  <label><input type="checkbox" /> فردية لكل موظف</label>
+                  <label><input type="checkbox" /> جماعية لكافة الموظفين</label>
+                </fieldset>
+              </section>
+
+              <section className="panel civil-section">
+                <h2>3. تفاصيل الموظفين المطلوب تغطيتهم</h2>
+                <div className="data-table fidelity-employees" role="group" aria-label="تفاصيل الموظفين المطلوب تغطيتهم">
+                  <div className="data-table-head">
+                    <span>الاسم</span>
+                    <span>المسمى الوظيفي</span>
+                    <span>الراتب الشهري</span>
+                    <span>مدة الخدمة</span>
+                    <span>مبلغ التغطية المطلوب</span>
+                  </div>
+                  {[1, 2, 3].map((row) => (
+                    <div className="data-table-row" key={row}>
+                      <input aria-label={`اسم الموظف ${row}`} type="text" />
+                      <input aria-label={`المسمى الوظيفي ${row}`} type="text" />
+                      <input aria-label={`الراتب الشهري ${row}`} type="text" inputMode="decimal" />
+                      <input aria-label={`مدة الخدمة ${row}`} type="text" />
+                      <input aria-label={`مبلغ التغطية المطلوب ${row}`} type="text" inputMode="decimal" />
+                    </div>
+                  ))}
+                </div>
+                <p className="api-note">يمكن إرفاق قائمة إضافية عند تفعيل رفع المرفقات وربط API.</p>
+              </section>
+
+              <section className="panel civil-section">
+                <h2>4. تفاصيل التغطية المطلوبة</h2>
+                <div className="grid two">
+                  <label className="civil-field">
+                    <span>الحد الأقصى لكل مطالبة (Per Loss Limit)</span>
+                    <input type="text" inputMode="decimal" />
+                  </label>
+                  <label className="civil-field">
+                    <span>الحد الأقصى لكل موظف (Per Employee Limit)</span>
+                    <input type="text" inputMode="decimal" />
+                  </label>
+                </div>
+                <fieldset className="civil-checks">
+                  <legend>فترة الاكتشاف بعد انتهاء الوثيقة</legend>
+                  <label><input type="checkbox" /> 3 أشهر</label>
+                  <label><input type="checkbox" /> 6 أشهر</label>
+                  <label><input type="checkbox" /> 12 شهراً</label>
+                </fieldset>
+              </section>
+
+              <section className="panel civil-section">
+                <h2>5. تفاصيل نظام الرقابة والإجراءات الداخلية</h2>
+                <div className="data-table control-table" role="group" aria-label="تفاصيل نظام الرقابة والإجراءات الداخلية">
+                  <div className="data-table-head">
+                    <span>السؤال</span>
+                    <span>نعم / لا</span>
+                    <span>ملاحظات</span>
+                  </div>
+                  {[
+                    "هل تتم مراجعة الحسابات بانتظام؟",
+                    "هل تُراجع السجلات من قبل مدقق خارجي؟",
+                    "هل يُطلب توقيع مزدوج على الصكوك؟",
+                    "هل هناك نظام لكاميرات المراقبة؟",
+                    "هل يتم تغيير المهام الوظيفية بشكل دوري؟",
+                  ].map((question) => (
+                    <div className="data-table-row" key={question}>
+                      <span className="table-question">{question}</span>
+                      <fieldset className="inline-choice">
+                        <label><input type="radio" name={question} /> نعم</label>
+                        <label><input type="radio" name={question} /> لا</label>
+                      </fieldset>
+                      <input aria-label={`ملاحظات ${question}`} type="text" />
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="panel civil-section">
+                <h2>6. خسائر سابقة (إن وجدت)</h2>
+                <div className="data-table prior-loss-table" role="group" aria-label="خسائر سابقة">
+                  <div className="data-table-head">
+                    <span>السؤال</span>
+                    <span>نعم / لا</span>
+                    <span>إذا نعم، يرجى التوضيح</span>
+                  </div>
+                  {[
+                    "هل سبق أن تعرضت المنشأة لحالة خيانة أمانة من موظف؟",
+                    "هل سبق وتم رفض أو إلغاء أو عدم تجديد وثيقة مشابهة؟",
+                  ].map((question) => (
+                    <div className="data-table-row" key={question}>
+                      <span className="table-question">{question}</span>
+                      <fieldset className="inline-choice">
+                        <label><input type="radio" name={question} /> نعم</label>
+                        <label><input type="radio" name={question} /> لا</label>
+                      </fieldset>
+                      <input aria-label={`توضيح ${question}`} type="text" />
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="panel civil-section">
+                <h2>7. الإقرار والتوقيع</h2>
+                <label className="civil-declaration">
+                  <input type="checkbox" />
+                  <span>
+                    أقر أنا الموقع أدناه أن جميع المعلومات أعلاه صحيحة وكاملة حسب علمي، وأفهم أن أي إخفاء أو تقديم معلومات غير صحيحة قد يؤدي إلى رفض المطالبة أو إلغاء الوثيقة.
+                  </span>
+                </label>
+                <div className="grid two">
+                  <label className="civil-field">
+                    <span>الاسم الكامل</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>الصفة / المسمى الوظيفي</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>التوقيع</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>التاريخ</span>
+                    <input type="date" />
+                  </label>
+                </div>
+                <p className="api-note">هذه البوابة جاهزة كواجهة أولية، وسيتم تفعيل الإرسال بعد ربط API الخاص بطلبات خيانة الأمانة.</p>
+                <button className="submit-button" type="submit" disabled>
+                  <CheckCircle2 size={20} aria-hidden="true" />
+                  إرسال الطلب
+                </button>
+              </section>
+            </form>
+          </motion.section>
+        ) : null}
+
+        {showCashInSafePage ? (
+          <motion.section className="civil-page" {...sectionAnimation}>
+            <div className="civil-header">
+              <span className="eyebrow">
+                <ShieldCheck size={18} aria-hidden="true" />
+                Money in Safe Insurance Proposal Form
+              </span>
+              <h1>استمارة طلب تأمين حفظ النقد</h1>
+              <p>
+                هذه الاستمارة مخصصة لتقييم تغطية النقد المحتفظ به داخل الخزنة، وتفاصيل الخزنة، أنظمة الحماية، والخسائر أو الوثائق السابقة.
+              </p>
+            </div>
+
+            <form className="civil-form" onSubmit={(event) => event.preventDefault()}>
+              <section className="panel civil-section">
+                <h2>1. معلومات مقدم الطلب</h2>
+                <div className="grid two">
+                  <label className="civil-field">
+                    <span>اسم الشركة / المؤسسة</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>نوع الكيان</span>
+                    <select defaultValue="">
+                      <option value="" disabled>اختر نوع الكيان</option>
+                      <option>فرد</option>
+                      <option>شركة</option>
+                      <option>مؤسسة حكومية</option>
+                    </select>
+                  </label>
+                  <label className="civil-field">
+                    <span>السجل التجاري / الترخيص</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>النشاط التجاري</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>العنوان الكامل</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>رقم الهاتف</span>
+                    <input type="tel" />
+                  </label>
+                  <label className="civil-field">
+                    <span>البريد الإلكتروني</span>
+                    <input type="email" />
+                  </label>
+                </div>
+              </section>
+
+              <section className="panel civil-section">
+                <h2>2. تفاصيل التغطية المطلوبة</h2>
+                <div className="grid three">
+                  <label className="civil-field">
+                    <span>النقد أثناء الحفظ (في الخزنة)</span>
+                    <input type="text" inputMode="decimal" />
+                  </label>
+                  <label className="civil-field">
+                    <span>الأضرار التي تلحق بالخزنة</span>
+                    <input type="text" inputMode="decimal" />
+                  </label>
+                  <label className="civil-field">
+                    <span>تغطية في أيام الإجازات والعطل الرسمية</span>
+                    <input type="text" />
+                  </label>
+                </div>
+              </section>
+
+              <section className="panel civil-section">
+                <h2>3. تفاصيل الخزنة ومكان الحفظ</h2>
+                <div className="grid two">
+                  <label className="civil-field">
+                    <span>عدد الخزن المتوفرة</span>
+                    <input type="number" min="0" />
+                  </label>
+                  <label className="civil-field">
+                    <span>موقع الخزنة داخل المنشأة</span>
+                    <input type="text" />
+                  </label>
+                </div>
+                <fieldset className="civil-checks">
+                  <legend>نوع الخزنة</legend>
+                  <label><input type="checkbox" /> خزنة فولاذية</label>
+                  <label><input type="checkbox" /> مقاومة للحريق</label>
+                  <label><input type="checkbox" /> أخرى</label>
+                </fieldset>
+                <label className="civil-field">
+                  <span>أخرى، يرجى التحديد</span>
+                  <input type="text" />
+                </label>
+                <fieldset className="civil-checks">
+                  <legend>نوع الإغلاق</legend>
+                  <label><input type="checkbox" /> قفل مفتاح</label>
+                  <label><input type="checkbox" /> قفل رقمي</label>
+                  <label><input type="checkbox" /> بيومتري</label>
+                </fieldset>
+                <fieldset className="civil-choice">
+                  <legend>هل الخزنة مثبتة بالأرض أو الجدار؟</legend>
+                  <label><input type="radio" name="safe-fixed" /> نعم</label>
+                  <label><input type="radio" name="safe-fixed" /> لا</label>
+                </fieldset>
+                <fieldset className="civil-choice">
+                  <legend>هل الخزنة في غرفة محصنة أو مقفلة؟</legend>
+                  <label><input type="radio" name="safe-room" /> نعم</label>
+                  <label><input type="radio" name="safe-room" /> لا</label>
+                </fieldset>
+                <fieldset className="civil-choice">
+                  <legend>هل يوجد نظام إنذار أو مراقبة؟</legend>
+                  <label><input type="radio" name="alarm-system" /> نعم</label>
+                  <label><input type="radio" name="alarm-system" /> لا</label>
+                </fieldset>
+                <label className="civil-field">
+                  <span>إذا نعم، نوع النظام</span>
+                  <input type="text" />
+                </label>
+              </section>
+
+              <section className="panel civil-section">
+                <h2>4. تفاصيل مبالغ النقد المحتفظ بها</h2>
+                <div className="grid three">
+                  <label className="civil-field">
+                    <span>الحد الأقصى للمبلغ المحتفظ به في أي وقت</span>
+                    <input type="text" inputMode="decimal" />
+                  </label>
+                  <label className="civil-field">
+                    <span>متوسط النقد اليومي في الخزنة</span>
+                    <input type="text" inputMode="decimal" />
+                  </label>
+                  <label className="civil-field">
+                    <span>أعلى مبلغ يتم الاحتفاظ به خلال عطلة نهاية الأسبوع</span>
+                    <input type="text" inputMode="decimal" />
+                  </label>
+                </div>
+              </section>
+
+              <section className="panel civil-section">
+                <h2>5. الخسائر السابقة</h2>
+                <div className="data-table prior-loss-table" role="group" aria-label="الخسائر السابقة">
+                  <div className="data-table-head">
+                    <span>السؤال</span>
+                    <span>نعم / لا</span>
+                    <span>إذا نعم، يرجى التوضيح</span>
+                  </div>
+                  {[
+                    "هل سبق وتعرضت المنشأة لخسارة في النقد؟",
+                    "هل سبق وتم رفض أو إلغاء وثيقة تأمين مشابهة؟",
+                  ].map((question) => (
+                    <div className="data-table-row" key={question}>
+                      <span className="table-question">{question}</span>
+                      <fieldset className="inline-choice">
+                        <label><input type="radio" name={question} /> نعم</label>
+                        <label><input type="radio" name={question} /> لا</label>
+                      </fieldset>
+                      <input aria-label={`توضيح ${question}`} type="text" />
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="panel civil-section">
+                <h2>6. تفاصيل الوثائق التأمينية الحالية (إن وجدت)</h2>
+                <div className="data-table policies-table" role="group" aria-label="تفاصيل الوثائق التأمينية الحالية">
+                  <div className="data-table-head">
+                    <span>نوع الوثيقة</span>
+                    <span>شركة التأمين</span>
+                    <span>رقم الوثيقة</span>
+                    <span>تاريخ الانتهاء</span>
+                  </div>
+                  {[1, 2].map((row) => (
+                    <div className="data-table-row" key={row}>
+                      <input aria-label={`نوع الوثيقة ${row}`} type="text" />
+                      <input aria-label={`شركة التأمين ${row}`} type="text" />
+                      <input aria-label={`رقم الوثيقة ${row}`} type="text" />
+                      <input aria-label={`تاريخ الانتهاء ${row}`} type="date" />
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="panel civil-section">
+                <h2>7. الإقرار والتوقيع</h2>
+                <label className="civil-declaration">
+                  <input type="checkbox" />
+                  <span>
+                    أقر أنا الموقع أدناه بأن جميع المعلومات المقدمة أعلاه صحيحة وكاملة حسب علمي، وأفوض شركة التأمين باستخدامها لغرض تقييم وإصدار الوثيقة. أفهم أن تقديم معلومات غير صحيحة أو إغفال معلومات جوهرية قد يؤدي إلى رفض المطالبة أو إلغاء الوثيقة.
+                  </span>
+                </label>
+                <p className="api-note">هذه البوابة جاهزة كواجهة أولية، وسيتم تفعيل الإرسال بعد ربط API الخاص بطلبات حفظ النقد.</p>
+                <button className="submit-button" type="submit" disabled>
+                  <ShieldCheck size={20} aria-hidden="true" />
+                  إرسال الطلب
+                </button>
+              </section>
+            </form>
+          </motion.section>
+        ) : null}
+
+        {showContractorsRiskPage ? (
+          <motion.section className="civil-page" {...sectionAnimation}>
+            <div className="civil-header">
+              <span className="eyebrow">
+                <Building2 size={18} aria-hidden="true" />
+                Contractors All Risks Insurance Proposal Form
+              </span>
+              <h1>استمارة طلب تأمين جميع أخطار المقاولين</h1>
+              <p>
+                هذه الاستمارة مخصصة لتقييم مشروع المقاولات، مبالغ التأمين المطلوبة، المخاطر الفنية، والتغطيات الإضافية قبل إصدار العرض التأميني.
+              </p>
+            </div>
+
+            <form className="civil-form" onSubmit={(event) => event.preventDefault()}>
+              <section className="panel civil-section">
+                <h2>1. معلومات عامة</h2>
+                <div className="grid two">
+                  <label className="civil-field">
+                    <span>اسم طالب التأمين</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>نوع الكيان</span>
+                    <select defaultValue="">
+                      <option value="" disabled>اختر نوع الكيان</option>
+                      <option>فرد</option>
+                      <option>شركة</option>
+                      <option>مؤسسة حكومية</option>
+                    </select>
+                  </label>
+                  <label className="civil-field">
+                    <span>العنوان الكامل</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>رقم الهاتف</span>
+                    <input type="tel" />
+                  </label>
+                  <label className="civil-field">
+                    <span>البريد الإلكتروني</span>
+                    <input type="email" />
+                  </label>
+                  <label className="civil-field">
+                    <span>رقم السجل التجاري</span>
+                    <input type="text" />
+                  </label>
+                </div>
+              </section>
+
+              <section className="panel civil-section">
+                <h2>2. معلومات المشروع</h2>
+                <div className="grid two">
+                  <label className="civil-field">
+                    <span>اسم المشروع</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>الموقع الجغرافي</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>المالك الرئيسي للمشروع</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>الجهة المستفيدة</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>تاريخ بدء العمل</span>
+                    <input type="date" />
+                  </label>
+                  <label className="civil-field">
+                    <span>المدة المتوقعة للتنفيذ</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>تاريخ الانتهاء المتوقع</span>
+                    <input type="date" />
+                  </label>
+                  <label className="civil-field">
+                    <span>فترة الصيانة</span>
+                    <input type="text" />
+                  </label>
+                </div>
+                <label className="civil-field">
+                  <span>وصف مختصر للمشروع</span>
+                  <textarea rows={4} />
+                </label>
+              </section>
+
+              <section className="panel civil-section">
+                <h2>3. مبالغ التأمين المطلوبة</h2>
+                <div className="grid two">
+                  <label className="civil-field">
+                    <span>عملة العقد</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>قيمة العقد (الأعمال المدنية والإنشائية)</span>
+                    <input type="text" inputMode="decimal" />
+                  </label>
+                  <label className="civil-field">
+                    <span>معدات وآليات المقاول</span>
+                    <input type="text" inputMode="decimal" />
+                  </label>
+                  <label className="civil-field">
+                    <span>مباني مؤقتة / مكاتب الموقع</span>
+                    <input type="text" inputMode="decimal" />
+                  </label>
+                  <label className="civil-field">
+                    <span>مسؤولية تجاه الطرف الثالث (الأضرار الجسدية والمادية)</span>
+                    <input type="text" inputMode="decimal" />
+                  </label>
+                </div>
+              </section>
+
+              <section className="panel civil-section">
+                <h2>4. تفاصيل إضافية</h2>
+                <div className="data-table prior-loss-table" role="group" aria-label="تفاصيل إضافية عن المشروع">
+                  <div className="data-table-head">
+                    <span>البند</span>
+                    <span>نعم / لا</span>
+                    <span>ملاحظات</span>
+                  </div>
+                  {[
+                    "هل سبق أن تم تنفيذ مشاريع مشابهة؟",
+                    "هل تم تنفيذ المشروع على أرض غير مستقرة أو معرضة للكوارث؟",
+                    "هل تم تنفيذ دراسة جيولوجية للموقع؟",
+                    "هل يتطلب المشروع استخدام متفجرات؟",
+                    "هل يشمل المشروع أعمال تحت الماء أو تحت الأرض؟",
+                  ].map((question) => (
+                    <div className="data-table-row" key={question}>
+                      <span className="table-question">{question}</span>
+                      <fieldset className="inline-choice">
+                        <label><input type="radio" name={question} /> نعم</label>
+                        <label><input type="radio" name={question} /> لا</label>
+                      </fieldset>
+                      <input aria-label={`ملاحظات ${question}`} type="text" />
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="panel civil-section">
+                <h2>5. التغطيات الإضافية المطلوبة (اختياري)</h2>
+                <fieldset className="civil-checks">
+                  <legend>يرجى وضع علامة أمام التغطيات المطلوبة</legend>
+                  <label><input type="checkbox" /> تغطية الكوارث الطبيعية (سيول، زلازل، فيضانات)</label>
+                  <label><input type="checkbox" /> السرقة</label>
+                  <label><input type="checkbox" /> أعمال الشغب والاضطرابات</label>
+                  <label><input type="checkbox" /> أخطار الحرب والإرهاب</label>
+                  <label><input type="checkbox" /> تمديد فترة الصيانة</label>
+                </fieldset>
+              </section>
+
+              <section className="panel civil-section">
+                <h2>6. الإقرارات</h2>
+                <label className="civil-declaration">
+                  <input type="checkbox" />
+                  <span>
+                    أقر أنا الموقع أدناه بأن جميع المعلومات الواردة أعلاه صحيحة وكاملة حسب علمي، وأفهم أن أي معلومات غير صحيحة أو ناقصة قد تؤدي إلى رفض أو إلغاء التأمين.
+                  </span>
+                </label>
+                <p className="api-note">هذه البوابة جاهزة كواجهة أولية، وسيتم تفعيل الإرسال بعد ربط API الخاص بطلبات جميع أخطار المقاولين.</p>
+                <button className="submit-button" type="submit" disabled>
+                  <Building2 size={20} aria-hidden="true" />
+                  إرسال الطلب
+                </button>
+              </section>
+            </form>
+          </motion.section>
+        ) : null}
+
+        {showPersonalAccidentPage ? (
+          <motion.section className="civil-page" {...sectionAnimation}>
+            <div className="civil-header">
+              <span className="eyebrow">
+                <ShieldCheck size={18} aria-hidden="true" />
+                Personal Accident Insurance Proposal Form
+              </span>
+              <h1>استمارة طلب تأمين الحوادث الشخصية</h1>
+              <p>
+                هذه الاستمارة مخصصة لتقييم بيانات مقدم الطلب، طبيعة العمل، التغطيات المطلوبة، الحالة الصحية، وأي وثائق أو طلبات سابقة.
+              </p>
+            </div>
+
+            <form className="civil-form" onSubmit={(event) => event.preventDefault()}>
+              <section className="panel civil-section">
+                <h2>1. معلومات الطلب</h2>
+                <div className="grid two">
+                  <label className="civil-field">
+                    <span>الاسم الكامل</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>العنوان الكامل</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>رقم الجوال</span>
+                    <input type="tel" />
+                  </label>
+                  <label className="civil-field">
+                    <span>البريد الإلكتروني</span>
+                    <input type="email" />
+                  </label>
+                  <label className="civil-field">
+                    <span>طبيعة العمل</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>عدد المؤمنين</span>
+                    <input type="number" min="1" />
+                  </label>
+                  <label className="civil-field">
+                    <span>الجنسية</span>
+                    <input type="text" />
+                  </label>
+                </div>
+                <fieldset className="civil-choice">
+                  <legend>هل يتضمن العمل استخدام معدات خطرة أو التعرض لمخاطر جسدية؟</legend>
+                  <label><input type="radio" name="hazardous-work" /> نعم</label>
+                  <label><input type="radio" name="hazardous-work" /> لا</label>
+                </fieldset>
+                <label className="civil-field">
+                  <span>إذا كانت الإجابة نعم، يرجى التوضيح</span>
+                  <textarea rows={3} />
+                </label>
+              </section>
+
+              <section className="panel civil-section">
+                <h2>2. التغطية المطلوبة</h2>
+                <div className="data-table accident-cover-table" role="group" aria-label="التغطية المطلوبة">
+                  <div className="data-table-head">
+                    <span>نوع التغطية</span>
+                    <span>مبلغ التغطية</span>
+                    <span>اختيار</span>
+                  </div>
+                  {[
+                    "الوفاة نتيجة حادث",
+                    "العجز الكلي الدائم نتيجة حادث",
+                    "العجز الجزئي الدائم نتيجة حادث",
+                    "العجز الكلي المؤقت نتيجة حادث",
+                    "العجز الجزئي المؤقت نتيجة حادث",
+                    "المصاريف الطبية الطارئة نتيجة حادث",
+                  ].map((coverage) => (
+                    <div className="data-table-row" key={coverage}>
+                      <span className="table-question">{coverage}</span>
+                      <input aria-label={`مبلغ ${coverage}`} type="text" inputMode="decimal" />
+                      <fieldset className="inline-choice">
+                        <label><input type="checkbox" /> مطلوب</label>
+                      </fieldset>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="panel civil-section">
+                <h2>3. الحالة الصحية</h2>
+                <div className="data-table prior-loss-table" role="group" aria-label="الحالة الصحية">
+                  <div className="data-table-head">
+                    <span>السؤال</span>
+                    <span>نعم / لا</span>
+                    <span>إذا نعم، يرجى التوضيح</span>
+                  </div>
+                  {[
+                    "هل تعاني من أي مرض مزمن؟",
+                    "هل سبق وتعرضت لأي حادث خطير؟",
+                    "هل لديك أي إعاقات حالية؟",
+                  ].map((question) => (
+                    <div className="data-table-row" key={question}>
+                      <span className="table-question">{question}</span>
+                      <fieldset className="inline-choice">
+                        <label><input type="radio" name={question} /> نعم</label>
+                        <label><input type="radio" name={question} /> لا</label>
+                      </fieldset>
+                      <input aria-label={`توضيح ${question}`} type="text" />
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="panel civil-section">
+                <h2>4. معلومات إضافية</h2>
+                <fieldset className="civil-choice">
+                  <legend>هل سبق وتم إصدار وثيقة تأمين حوادث شخصية لك؟</legend>
+                  <label><input type="radio" name="previous-pa-policy" /> نعم</label>
+                  <label><input type="radio" name="previous-pa-policy" /> لا</label>
+                </fieldset>
+                <fieldset className="civil-choice">
+                  <legend>هل تم رفض طلب تأمين لك في السابق؟</legend>
+                  <label><input type="radio" name="previous-pa-decline" /> نعم</label>
+                  <label><input type="radio" name="previous-pa-decline" /> لا</label>
+                </fieldset>
+                <fieldset className="civil-choice">
+                  <legend>هل توجد وثائق تأمين أخرى سارية؟ (صحية / حوادث / حياة)</legend>
+                  <label><input type="radio" name="other-active-policies" /> نعم</label>
+                  <label><input type="radio" name="other-active-policies" /> لا</label>
+                </fieldset>
+              </section>
+
+              <section className="panel civil-section">
+                <h2>5. الإقرار والتوقيع</h2>
+                <label className="civil-declaration">
+                  <input type="checkbox" />
+                  <span>
+                    أقر أنا الموقع أدناه بأن جميع المعلومات المذكورة في هذه الاستمارة صحيحة وكاملة حسب علمي، وأفهم أن أي معلومات غير صحيحة أو إغفال معلومات جوهرية قد يؤدي إلى إلغاء الوثيقة أو رفض المطالبات.
+                  </span>
+                </label>
+                <p className="api-note">هذه البوابة جاهزة كواجهة أولية، وسيتم تفعيل الإرسال بعد ربط API الخاص بطلبات الحوادث الشخصية.</p>
+                <button className="submit-button" type="submit" disabled>
+                  <ShieldCheck size={20} aria-hidden="true" />
+                  إرسال الطلب
+                </button>
+              </section>
+            </form>
+          </motion.section>
+        ) : null}
+
+        {showWorkersCompPage ? (
+          <motion.section className="civil-page" {...sectionAnimation}>
+            <div className="civil-header">
+              <span className="eyebrow">
+                <Building2 size={18} aria-hidden="true" />
+                Workmen's Compensation / Employer's Liability Insurance Proposal Form
+              </span>
+              <h1>استمارة طلب تأمين إصابات العمال</h1>
+              <p>
+                هذه الاستمارة مخصصة لتقييم بيانات صاحب العمل، فئات العمال المؤمن عليهم، التغطية المطلوبة، طبيعة موقع العمل، والمطالبات السابقة.
+              </p>
+            </div>
+
+            <form className="civil-form" onSubmit={(event) => event.preventDefault()}>
+              <section className="panel civil-section">
+                <h2>1. معلومات صاحب العمل (المؤمن له)</h2>
+                <div className="grid two">
+                  <label className="civil-field">
+                    <span>اسم الشركة / المؤسسة</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>نوع النشاط</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>السجل التجاري / الترخيص</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>العنوان</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>رقم الهاتف</span>
+                    <input type="tel" />
+                  </label>
+                  <label className="civil-field">
+                    <span>البريد الإلكتروني</span>
+                    <input type="email" />
+                  </label>
+                </div>
+              </section>
+
+              <section className="panel civil-section">
+                <h2>2. تفاصيل العمال المؤمن عليهم</h2>
+                <div className="data-table workers-table" role="group" aria-label="تفاصيل العمال المؤمن عليهم">
+                  <div className="data-table-head">
+                    <span>الفئة</span>
+                    <span>عدد العمال</span>
+                    <span>متوسط الراتب الشهري</span>
+                    <span>المسمى الوظيفي / المهام</span>
+                  </div>
+                  {["فنيون", "عمال", "سائقون", "إداريون", "الإجمالي"].map((category) => (
+                    <div className="data-table-row" key={category}>
+                      <span className="table-question">{category}</span>
+                      <input aria-label={`عدد العمال ${category}`} type="number" min="0" />
+                      <input aria-label={`متوسط الراتب الشهري ${category}`} type="text" inputMode="decimal" disabled={category === "الإجمالي"} />
+                      <input aria-label={`المسمى الوظيفي أو المهام ${category}`} type="text" disabled={category === "الإجمالي"} />
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="panel civil-section">
+                <h2>3. تفاصيل التغطية المطلوبة</h2>
+                <div className="data-table accident-cover-table" role="group" aria-label="تفاصيل التغطية المطلوبة">
+                  <div className="data-table-head">
+                    <span>نوع التغطية</span>
+                    <span>مبلغ / حد التغطية</span>
+                    <span>اختيار</span>
+                  </div>
+                  {[
+                    "الوفاة أثناء العمل",
+                    "العجز الكلي الدائم",
+                    "العجز الجزئي الدائم",
+                    "المصاريف الطبية - بحد أقصى",
+                    "تغطية مسؤولية صاحب العمل تجاه عائلة العامل",
+                  ].map((coverage) => (
+                    <div className="data-table-row" key={coverage}>
+                      <span className="table-question">{coverage}</span>
+                      <input aria-label={`مبلغ ${coverage}`} type="text" inputMode="decimal" />
+                      <fieldset className="inline-choice">
+                        <label><input type="checkbox" /> مطلوب</label>
+                      </fieldset>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="panel civil-section">
+                <h2>4. تفاصيل ساعات ومكان العمل</h2>
+                <div className="grid three">
+                  <label className="civil-field">
+                    <span>موقع تنفيذ العمل الرئيسي</span>
+                    <input type="text" />
+                  </label>
+                  <label className="civil-field">
+                    <span>عدد ساعات العمل اليومية</span>
+                    <input type="number" min="0" />
+                  </label>
+                  <label className="civil-field">
+                    <span>عدد أيام العمل الأسبوعية</span>
+                    <input type="number" min="0" max="7" />
+                  </label>
+                </div>
+                <fieldset className="civil-choice">
+                  <legend>هل هناك أعمال خطرة؟ مثل العمل في المرتفعات، تحت الأرض، كهرباء...</legend>
+                  <label><input type="radio" name="dangerous-work" /> نعم</label>
+                  <label><input type="radio" name="dangerous-work" /> لا</label>
+                </fieldset>
+                <label className="civil-field">
+                  <span>إذا كانت الإجابة نعم، يرجى التوضيح</span>
+                  <textarea rows={4} />
+                </label>
+              </section>
+
+              <section className="panel civil-section">
+                <h2>5. المطالبات السابقة</h2>
+                <div className="data-table prior-loss-table" role="group" aria-label="المطالبات السابقة">
+                  <div className="data-table-head">
+                    <span>السؤال</span>
+                    <span>نعم / لا</span>
+                    <span>إذا نعم، يرجى التوضيح</span>
+                  </div>
+                  {[
+                    "هل سبق أن تعرضت الشركة لأي مطالبات تتعلق بإصابات عمالية؟",
+                    "هل تم رفض أو إلغاء وثيقة تأمين إصابات عمالية سابقاً؟",
+                  ].map((question) => (
+                    <div className="data-table-row" key={question}>
+                      <span className="table-question">{question}</span>
+                      <fieldset className="inline-choice">
+                        <label><input type="radio" name={question} /> نعم</label>
+                        <label><input type="radio" name={question} /> لا</label>
+                      </fieldset>
+                      <input aria-label={`توضيح ${question}`} type="text" />
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="panel civil-section">
+                <h2>6. الإقرار والتوقيع</h2>
+                <label className="civil-declaration">
+                  <input type="checkbox" />
+                  <span>
+                    أقر أنا الموقع أدناه بأن كافة البيانات والمعلومات المذكورة في هذه الاستمارة صحيحة وكاملة، وأفهم أن أي تقديم خاطئ أو إغفال لمعلومات جوهرية قد يؤدي إلى إلغاء التأمين أو رفض المطالبة.
+                  </span>
+                </label>
+                <p className="api-note">هذه البوابة جاهزة كواجهة أولية، وسيتم تفعيل الإرسال بعد ربط API الخاص بطلبات إصابات العمال.</p>
+                <button className="submit-button" type="submit" disabled>
+                  <Building2 size={20} aria-hidden="true" />
+                  إرسال الطلب
+                </button>
+              </section>
+            </form>
+          </motion.section>
         ) : null}
 
         {showTrackingPage ? (

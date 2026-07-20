@@ -1132,6 +1132,251 @@ h1 {
   line-height: 1.85;
 }
 
+.civil-page {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.civil-header {
+  max-width: 860px;
+}
+
+.civil-header h1 {
+  margin-bottom: 1rem;
+  font-size: clamp(2rem, 4.8vw, 4.6rem);
+}
+
+.civil-header p {
+  color: var(--muted);
+  font-size: clamp(1rem, 1.7vw, 1.18rem);
+  line-height: 1.9;
+}
+
+.civil-form {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.civil-section {
+  display: grid;
+  gap: 1rem;
+}
+
+.civil-section h2 {
+  margin-bottom: 0.35rem;
+}
+
+.civil-field {
+  display: grid;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.civil-field span,
+.civil-choice legend,
+.civil-checks legend {
+  color: var(--text);
+  font-weight: 900;
+}
+
+.civil-field input,
+.civil-field select,
+.civil-field textarea {
+  width: 100%;
+  min-height: 54px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  color: var(--text);
+  padding: 0.85rem 1rem;
+  outline: none;
+}
+
+.civil-field textarea {
+  resize: vertical;
+  line-height: 1.7;
+}
+
+.civil-field input:focus,
+.civil-field select:focus,
+.civil-field textarea:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--green) 16%, transparent);
+}
+
+.civil-choice,
+.civil-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface-strong) 72%, transparent);
+}
+
+.civil-choice legend,
+.civil-checks legend {
+  padding: 0 0.35rem;
+}
+
+.civil-choice label,
+.civil-checks label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 40px;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--green) 26%, var(--line));
+  border-radius: 8px;
+  background: var(--surface-strong);
+  color: var(--text);
+  font-weight: 800;
+}
+
+.civil-choice input,
+.civil-checks input,
+.civil-declaration input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--green);
+}
+
+.civil-declaration {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 0.7rem;
+  padding: 1rem;
+  border: 1px solid color-mix(in srgb, var(--green) 36%, var(--line));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--green) 8%, var(--surface-strong));
+  font-weight: 800;
+  line-height: 1.8;
+}
+
+.glass-table,
+.data-table {
+  display: grid;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.2rem;
+}
+
+.glass-table-head,
+.glass-table-row,
+.data-table-head,
+.data-table-row {
+  display: grid;
+  grid-template-columns: 1fr 0.65fr 1.35fr 1fr 1fr;
+  gap: 0.5rem;
+  min-width: 820px;
+}
+
+.control-table .data-table-head,
+.control-table .data-table-row,
+.prior-loss-table .data-table-head,
+.prior-loss-table .data-table-row {
+  grid-template-columns: minmax(280px, 1.35fr) minmax(190px, 0.8fr) minmax(220px, 1fr);
+}
+
+.policies-table .data-table-head,
+.policies-table .data-table-row {
+  grid-template-columns: repeat(4, minmax(170px, 1fr));
+}
+
+.workers-table .data-table-head,
+.workers-table .data-table-row {
+  grid-template-columns: minmax(140px, 0.7fr) minmax(150px, 0.65fr) minmax(190px, 0.9fr) minmax(260px, 1.35fr);
+}
+
+.accident-cover-table .data-table-head,
+.accident-cover-table .data-table-row {
+  grid-template-columns: minmax(300px, 1.4fr) minmax(190px, 0.9fr) minmax(150px, 0.6fr);
+}
+
+.glass-table-head span,
+.data-table-head span {
+  padding: 0.7rem 0.8rem;
+  border: 1px solid color-mix(in srgb, var(--green) 24%, var(--line));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--green) 9%, var(--surface-strong));
+  color: var(--green-dark);
+  font-size: 0.88rem;
+  font-weight: 900;
+  text-align: center;
+}
+
+.glass-table-row input,
+.data-table-row input {
+  width: 100%;
+  min-height: 50px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  color: var(--text);
+  padding: 0.75rem 0.85rem;
+  outline: none;
+}
+
+.data-table-row input:disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
+}
+
+.glass-table-row input:focus,
+.data-table-row input:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--green) 16%, transparent);
+}
+
+.table-question {
+  display: flex;
+  align-items: center;
+  min-height: 50px;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  color: var(--text);
+  font-weight: 800;
+  line-height: 1.55;
+}
+
+.inline-choice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 50px;
+  margin: 0;
+  padding: 0.45rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-strong);
+}
+
+.inline-choice label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 800;
+}
+
+.inline-choice input {
+  min-height: 0;
+  width: 17px;
+  height: 17px;
+  accent-color: var(--green);
+}
+
+.api-note {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.8;
+}
+
 .contact-list,
 .whatsapp-list {
   display: grid;
