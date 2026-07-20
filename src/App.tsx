@@ -187,6 +187,16 @@ function App() {
   const showContractorsRiskPage = page === "contractors-risk";
   const showPersonalAccidentPage = page === "personal-accident";
   const showWorkersCompPage = page === "workers-comp";
+  const showInsuranceFormPage =
+    showHome ||
+    showCivilLiabilityPage ||
+    showTravelPage ||
+    showBuildingGlassPage ||
+    showFidelityGuaranteePage ||
+    showCashInSafePage ||
+    showContractorsRiskPage ||
+    showPersonalAccidentPage ||
+    showWorkersCompPage;
 
   const steps = [t.customer, t.vehicle, t.images, t.documents, t.notes, t.submitStep];
   const trackingSteps = [t.trackReceived, t.trackReview, t.trackDocuments, t.trackPricing, t.trackContact];
@@ -584,30 +594,32 @@ function App() {
       </header>
 
       <main id="top">
+        {showInsuranceFormPage ? (
+          <motion.section
+            className="intro-banner"
+            initial={{ opacity: 0, y: -18, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.65, ease: "easeOut" }}
+            aria-label={t.headline}
+          >
+            <motion.div
+              className="intro-glow"
+              animate={{ x: ["-18%", "18%", "-18%"], opacity: [0.55, 0.9, 0.55] }}
+              transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+              aria-hidden="true"
+            />
+            <motion.p
+              className="intro-title"
+              animate={{ y: [0, -6, 0] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+            >
+              {t.headline}
+            </motion.p>
+          </motion.section>
+        ) : null}
+
         {showHome ? (
           <>
-        <motion.section
-          className="intro-banner"
-          initial={{ opacity: 0, y: -18, scale: 0.98 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.65, ease: "easeOut" }}
-          aria-label={t.headline}
-        >
-          <motion.div
-            className="intro-glow"
-            animate={{ x: ["-18%", "18%", "-18%"], opacity: [0.55, 0.9, 0.55] }}
-            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-            aria-hidden="true"
-          />
-          <motion.p
-            className="intro-title"
-            animate={{ y: [0, -6, 0] }}
-            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-          >
-            {t.headline}
-          </motion.p>
-        </motion.section>
-
         <section className="hero">
           <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.55 }}>
             <span className="eyebrow">
