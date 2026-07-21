@@ -8,6 +8,10 @@ type EngineeringRequestResponse = {
   trackingNumber?: string;
   status?: string;
   message?: string;
+  details?: Array<{
+    path?: string;
+    message?: string;
+  }>;
 };
 
 const localizedDigitMap: Record<string, string> = {
@@ -61,15 +65,26 @@ function cleanOptional(value: string) {
 }
 
 export async function submitEngineeringRequest(form: EngineeringFormState, agentCode?: string) {
+  const optionalCustomerFields = {
+    ...(cleanOptional(form.email) ? { email: cleanOptional(form.email) } : {}),
+    ...(cleanOptional(form.nationalId) ? { nationalId: cleanOptional(form.nationalId) } : {}),
+    ...(cleanOptional(form.address) ? { address: cleanOptional(form.address) } : {}),
+    ...(cleanOptional(form.city) ? { city: cleanOptional(form.city) } : {}),
+  };
+  const optionalProjectFields = {
+    ...(form.startDate ? { startDate: new Date(form.startDate).toISOString() } : {}),
+    ...(form.endDate ? { endDate: new Date(form.endDate).toISOString() } : {}),
+    ...(cleanOptional(form.contractorName) ? { contractorName: cleanOptional(form.contractorName) } : {}),
+    ...(cleanOptional(form.ownerName) ? { ownerName: cleanOptional(form.ownerName) } : {}),
+    ...(cleanOptional(form.riskDetails) ? { riskDetails: cleanOptional(form.riskDetails) } : {}),
+  };
+
   const payload = {
     submissionToken: typeof crypto.randomUUID === "function" ? crypto.randomUUID() : undefined,
     customer: {
       fullName: form.fullName.trim(),
       mobile: form.mobile.trim(),
-      email: cleanOptional(form.email),
-      nationalId: cleanOptional(form.nationalId),
-      address: cleanOptional(form.address),
-      city: cleanOptional(form.city),
+      ...optionalCustomerFields,
     },
     project: {
       name: form.projectName.trim(),
@@ -78,21 +93,22 @@ export async function submitEngineeringRequest(form: EngineeringFormState, agent
       contractValue: toRequiredNumber(form.contractValue, "project.contractValue"),
       currency: form.currency.trim() || "IQD",
       insuranceType: form.insuranceType.trim(),
-      startDate: toIsoDate(form.startDate),
-      endDate: toIsoDate(form.endDate),
-      contractorName: cleanOptional(form.contractorName),
-      ownerName: cleanOptional(form.ownerName),
-      riskDetails: cleanOptional(form.riskDetails),
+      ...optionalProjectFields,
     },
     documents: [],
-    notes: cleanOptional(form.notes),
+    ...(cleanOptional(form.notes) ? { notes: cleanOptional(form.notes) } : {}),
     agentCode: agentCode || "external-engineering-form",
   };
 
   const response = await postJson<EngineeringRequestResponse>("/api/v1/public/engineering-requests", payload);
 
   if (response.success === false) {
-    throw new Error(response.message || "Failed to submit request.");
+    const details = response.details
+      ?.map((detail) => [detail.path, detail.message].filter(Boolean).join(": "))
+      .filter(Boolean)
+      .join("، ");
+
+    throw new Error(details || response.message || "Failed to submit request.");
   }
 
   if (!response.requestNumber && !response.trackingNumber) {

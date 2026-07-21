@@ -14,6 +14,28 @@ export class ApiError extends Error {
   }
 }
 
+function getErrorMessageFromResponse(responseBody: string) {
+  if (!responseBody) return "Request failed.";
+
+  try {
+    const data = JSON.parse(responseBody) as {
+      message?: string;
+      details?: Array<{
+        path?: string;
+        message?: string;
+      }>;
+    };
+    const details = data.details
+      ?.map((detail) => [detail.path, detail.message].filter(Boolean).join(": "))
+      .filter(Boolean)
+      .join("، ");
+
+    return details || data.message || "Request failed.";
+  } catch {
+    return "Request failed.";
+  }
+}
+
 function getApiConfig() {
   if (!apiBaseUrl) {
     throw new ApiError(500, "API base URL is not configured.");
@@ -75,7 +97,7 @@ export async function postJson<TResponse>(path: string, body: unknown): Promise<
     }
 
     if (!response.ok) {
-      throw new ApiError(response.status, "Request failed.", responseBody);
+      throw new ApiError(response.status, getErrorMessageFromResponse(responseBody), responseBody);
     }
 
     return data as TResponse;
@@ -127,7 +149,7 @@ export async function getJson<TResponse>(path: string): Promise<TResponse> {
     }
 
     if (!response.ok) {
-      throw new ApiError(response.status, "Request failed.", responseBody);
+      throw new ApiError(response.status, getErrorMessageFromResponse(responseBody), responseBody);
     }
 
     return data as TResponse;
@@ -174,7 +196,7 @@ export async function getSameOriginJson<TResponse>(path: string): Promise<TRespo
     }
 
     if (!response.ok) {
-      throw new ApiError(response.status, "Request failed.", responseBody);
+      throw new ApiError(response.status, getErrorMessageFromResponse(responseBody), responseBody);
     }
 
     return data as TResponse;
