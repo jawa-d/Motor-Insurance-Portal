@@ -67,13 +67,14 @@ const supportWhatsApp = [
 const fallbackFormUrl =
   "https://docs.google.com/forms/d/e/1FAIpQLSc_xrj87VpZj0VRte-KCnaidxUUIVx1t5brl7NaBVJXRls_qA/viewform?usp=publish-editor";
 
-type Page = "home" | "engineering" | "track" | "support";
+type Page = "home" | "motor" | "engineering" | "track" | "support";
 
 const getCurrentPage = (): Page => {
   const path = window.location.pathname.replace(/\/+$/, "");
 
   if (path === "/track") return "track";
   if (path === "/support") return "support";
+  if (path === "/motor") return "motor";
   if (path === "/engineering") return "engineering";
 
   return "home";
@@ -149,6 +150,7 @@ function App() {
   const direction = language === "ar" ? "rtl" : "ltr";
   const isFormLocked = isSubmitting || Boolean(uploadProgress);
   const showHome = page === "home";
+  const showMotorPage = page === "motor";
   const showEngineeringPage = page === "engineering";
   const showTrackingPage = page === "track";
   const showSupportPage = page === "support";
@@ -552,6 +554,10 @@ function App() {
           <span>{t.portal}</span>
         </a>
         <div className="header-actions">
+          <a className="icon-button" href="/motor" onClick={navigate("motor")}>
+            <CarFront size={18} aria-hidden="true" />
+            طلب مركبات
+          </a>
           <a className="icon-button" href="/engineering" onClick={navigate("engineering")}>
             <Building2 size={18} aria-hidden="true" />
             تأمين هندسي
@@ -602,11 +608,15 @@ function App() {
               <ShieldCheck size={18} aria-hidden="true" />
               {t.brand}
             </span>
-            <h1>{t.title}</h1>
-            <p>{t.subtitle}</p>
-            <a className="primary-link" href="#request-form">
+            <h1>بوابة طلبات التأمين</h1>
+            <p>قدّم طلب تأمين المركبات أو التأمين الهندسي، تابع حالة طلبك، وتواصل مع فريق الدعم من مكان واحد.</p>
+            <a className="primary-link" href="/motor" onClick={navigate("motor")}>
               <CarFront size={20} aria-hidden="true" />
-              {t.start}
+              طلب تأمين مركبات
+            </a>
+            <a className="ghost-link" href="/engineering" onClick={navigate("engineering")}>
+              <Building2 size={20} aria-hidden="true" />
+              طلب تأمين هندسي
             </a>
             <a className="ghost-link" href="/track" onClick={navigate("track")}>
               <MapPinned size={20} aria-hidden="true" />
@@ -639,6 +649,33 @@ function App() {
               </svg>
             </div>
           </motion.div>
+        </section>
+
+        <section className="home-actions" aria-label="خدمات بوابة التأمين">
+          <article>
+            <span><CarFront size={22} aria-hidden="true" /></span>
+            <h2>تأمين المركبات</h2>
+            <p>املأ بيانات العميل والمركبة وارفع الصور والمستندات المطلوبة لإرسال الطلب إلى النظام.</p>
+            <a href="/motor" onClick={navigate("motor")}>ابدأ الطلب</a>
+          </article>
+          <article>
+            <span><Building2 size={22} aria-hidden="true" /></span>
+            <h2>التأمين الهندسي</h2>
+            <p>قدّم تفاصيل المشروع وقيمة العقد ونوع التغطية ليتم تسجيل طلب هندسي جديد.</p>
+            <a href="/engineering" onClick={navigate("engineering")}>فتح الفورمة</a>
+          </article>
+          <article>
+            <span><MapPinned size={22} aria-hidden="true" /></span>
+            <h2>تتبع الطلب</h2>
+            <p>استخدم رقم التتبع لمعرفة مرحلة معالجة الطلب وآخر تحديث مسجل.</p>
+            <a href="/track" onClick={navigate("track")}>تتبع الآن</a>
+          </article>
+          <article>
+            <span><Phone size={22} aria-hidden="true" /></span>
+            <h2>الدعم</h2>
+            <p>تواصل مع فريق عراق تكافل عبر الهاتف أو واتساب أو البريد الإلكتروني.</p>
+            <a href="/support" onClick={navigate("support")}>معلومات الدعم</a>
+          </article>
         </section>
           </>
         ) : null}
@@ -962,8 +999,17 @@ function App() {
         </motion.section>
         ) : null}
 
-        {showHome ? (
+        {showMotorPage ? (
           <>
+        <motion.section className="motor-page-head" {...sectionAnimation}>
+          <span className="eyebrow">
+            <CarFront size={18} aria-hidden="true" />
+            طلب تأمين المركبات
+          </span>
+          <h1>{t.title}</h1>
+          <p>{t.subtitle}</p>
+        </motion.section>
+
         <ProgressSteps steps={steps} completed={completed} labels={{ completed: t.completed, pending: t.pending }} />
 
         <form id="request-form" className="request-form" onSubmit={submit} noValidate aria-busy={isFormLocked}>

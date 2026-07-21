@@ -1062,6 +1062,76 @@ h1 {
   box-shadow: var(--shadow);
 }
 
+.home-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.home-actions article,
+.motor-page-head {
+  padding: clamp(1rem, 2.4vw, 1.5rem);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.home-actions article {
+  display: grid;
+  align-content: start;
+  gap: 0.75rem;
+  min-height: 235px;
+}
+
+.home-actions span {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--green-dark);
+  background: color-mix(in srgb, var(--green) 13%, var(--surface-strong));
+}
+
+.home-actions h2 {
+  margin: 0;
+  font-size: 1.12rem;
+}
+
+.home-actions p,
+.motor-page-head p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.8;
+}
+
+.home-actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: start;
+  min-height: 42px;
+  margin-top: auto;
+  padding: 0.65rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--green) 32%, var(--line));
+  border-radius: 8px;
+  background: var(--surface-strong);
+  color: var(--green-dark);
+  text-decoration: none;
+  font-weight: 900;
+}
+
+.motor-page-head {
+  margin-bottom: 1.25rem;
+}
+
+.motor-page-head h1 {
+  margin-bottom: 0.75rem;
+  font-size: clamp(1.9rem, 4vw, 3.4rem);
+}
+
 .engineering-hero {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(220px, 0.38fr);
@@ -1541,6 +1611,10 @@ h1 {
     grid-template-columns: 1fr;
   }
 
+  .home-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .contact-card,
   .address-card {
     grid-column: auto;
@@ -1621,6 +1695,10 @@ h1 {
   .tracking-modal-details,
   .tracking-modal-steps,
   .contact-list,
+  .home-actions,
+  .support-page,
+  .support-grid,
+  .engineering-hero,
   .grid.two,
   .grid.three,
   .upload-drop {
