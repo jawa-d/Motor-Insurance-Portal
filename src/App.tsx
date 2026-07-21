@@ -29,6 +29,7 @@ import { ProgressSteps } from "./components/ProgressSteps";
 import { UploadZone } from "./components/UploadZone";
 import { translations, type Language } from "./i18n";
 import { ApiError } from "./services/api";
+import { submitEngineeringRequest } from "./services/engineering-request";
 import {
   submitMotorRequest,
   trackMotorRequest,
@@ -36,8 +37,8 @@ import {
   type MotorRequestUploadProgress,
   type PublicMotorRequestStatus,
 } from "./services/motor-request";
-import type { DocumentKey, Errors, FormState, UploadFile } from "./types";
-import { createSchema, initialForm } from "./validation";
+import type { DocumentKey, EngineeringFormState, Errors, FormState, UploadFile } from "./types";
+import { createEngineeringSchema, createSchema, initialEngineeringForm, initialForm } from "./validation";
 
 const documentKeys: DocumentKey[] = [
   "frontNationalId",
@@ -66,13 +67,14 @@ const supportWhatsApp = [
 const fallbackFormUrl =
   "https://docs.google.com/forms/d/e/1FAIpQLSc_xrj87VpZj0VRte-KCnaidxUUIVx1t5brl7NaBVJXRls_qA/viewform?usp=publish-editor";
 
-type Page = "home" | "track" | "support";
+type Page = "home" | "engineering" | "track" | "support";
 
 const getCurrentPage = (): Page => {
   const path = window.location.pathname.replace(/\/+$/, "");
 
   if (path === "/track") return "track";
   if (path === "/support") return "support";
+  if (path === "/engineering") return "engineering";
 
   return "home";
 };
@@ -123,6 +125,7 @@ function App() {
   const [darkMode, setDarkMode] = useState(false);
   const [page, setPage] = useState<Page>(getCurrentPage);
   const [form, setForm] = useState<FormState>(initialForm);
+  const [engineeringForm, setEngineeringForm] = useState<EngineeringFormState>(initialEngineeringForm);
   const [vehicleImages, setVehicleImages] = useState<UploadFile[]>([]);
   const [documents, setDocuments] = useState<Partial<Record<DocumentKey, UploadFile>>>({});
   const [errors, setErrors] = useState<Errors>({});
@@ -135,6 +138,10 @@ function App() {
   const [trackingError, setTrackingError] = useState<string | null>(null);
   const [isTracking, setIsTracking] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [engineeringErrors, setEngineeringErrors] = useState<Errors>({});
+  const [engineeringSubmitError, setEngineeringSubmitError] = useState<string | null>(null);
+  const [engineeringRequest, setEngineeringRequest] = useState<{ requestNumber: string; trackingNumber: string; status: string } | null>(null);
+  const [isEngineeringSubmitting, setIsEngineeringSubmitting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<MotorRequestUploadProgress | null>(null);
 
@@ -142,6 +149,7 @@ function App() {
   const direction = language === "ar" ? "rtl" : "ltr";
   const isFormLocked = isSubmitting || Boolean(uploadProgress);
   const showHome = page === "home";
+  const showEngineeringPage = page === "engineering";
   const showTrackingPage = page === "track";
   const showSupportPage = page === "support";
 
@@ -191,6 +199,13 @@ function App() {
       }),
     [t],
   );
+  const engineeringSchema = useMemo(
+    () =>
+      createEngineeringSchema({
+        fieldRequired: t.fieldRequired,
+      }),
+    [t],
+  );
 
   useEffect(() => {
     const updatePage = () => setPage(getCurrentPage());
@@ -216,6 +231,12 @@ function App() {
     const value = event.target.type === "checkbox" ? (event.target as HTMLInputElement).checked : event.target.value;
     setForm((current) => ({ ...current, [key]: value }));
     setErrors((current) => ({ ...current, [key]: undefined }));
+  };
+
+  const setEngineeringValue = (key: keyof EngineeringFormState) => (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const value = event.target.type === "checkbox" ? (event.target as HTMLInputElement).checked : event.target.value;
+    setEngineeringForm((current) => ({ ...current, [key]: value }));
+    setEngineeringErrors((current) => ({ ...current, [key]: undefined }));
   };
 
   const getTrackingErrorMessage = (error: unknown) => {
@@ -441,6 +462,42 @@ function App() {
     }
   };
 
+  const submitEngineering = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (isEngineeringSubmitting) return;
+
+    const parsed = engineeringSchema.safeParse(engineeringForm);
+    const nextErrors: Errors = {};
+    setEngineeringSubmitError(null);
+    setEngineeringRequest(null);
+
+    if (!parsed.success) {
+      for (const issue of parsed.error.issues) {
+        nextErrors[String(issue.path[0])] = issue.message;
+      }
+    }
+
+    if (!engineeringForm.confirmed) {
+      nextErrors.confirmed = t.fieldRequired;
+    }
+
+    setEngineeringErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length > 0) return;
+
+    try {
+      setIsEngineeringSubmitting(true);
+      const result = await submitEngineeringRequest(engineeringForm, agentCode);
+      setEngineeringRequest(result);
+      setEngineeringForm(initialEngineeringForm);
+      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+    } catch (error) {
+      setEngineeringSubmitError(getSubmitErrorMessage(error));
+    } finally {
+      setIsEngineeringSubmitting(false);
+    }
+  };
+
   const trackingActiveIndex = trackingLookup ? trackingStatusIndex[trackingLookup.status] : 0;
   const trackingUpdatedAt = trackingLookup
     ? new Intl.DateTimeFormat(language === "ar" ? "ar-IQ" : "en", {
@@ -495,6 +552,10 @@ function App() {
           <span>{t.portal}</span>
         </a>
         <div className="header-actions">
+          <a className="icon-button" href="/engineering" onClick={navigate("engineering")}>
+            <Building2 size={18} aria-hidden="true" />
+            تأمين هندسي
+          </a>
           <a className="icon-button" href="/support" onClick={navigate("support")}>
             <Phone size={18} aria-hidden="true" />
             {t.support}
@@ -718,6 +779,112 @@ function App() {
             </motion.div>
           ) : null}
         </motion.section>
+        ) : null}
+
+        {showEngineeringPage ? (
+          <>
+            <motion.section className="engineering-hero" {...sectionAnimation}>
+              <div>
+                <span className="eyebrow">
+                  <Building2 size={18} aria-hidden="true" />
+                  تأمين المشاريع الهندسية
+                </span>
+                <h1>طلب تأمين هندسي</h1>
+                <p>أدخل بيانات العميل والمشروع حتى يتم إرسال الطلب مباشرة إلى نظام TRINSU.</p>
+              </div>
+              <div className="engineering-metrics" aria-hidden="true">
+                <span>CAR</span>
+                <strong>Contractors All Risks</strong>
+                <small>Engineering request</small>
+              </div>
+            </motion.section>
+
+            <form id="engineering-request-form" className="request-form" onSubmit={submitEngineering} noValidate>
+              <fieldset className="form-fieldset" disabled={isEngineeringSubmitting}>
+                <motion.section className="panel" {...sectionAnimation}>
+                  <h2>معلومات العميل</h2>
+                  <div className="grid two">
+                    <FloatingField id="eng-fullName" label="الاسم الكامل" value={engineeringForm.fullName} error={engineeringErrors.fullName} required onChange={setEngineeringValue("fullName")} />
+                    <FloatingField id="eng-mobile" label="رقم الموبايل" value={engineeringForm.mobile} error={engineeringErrors.mobile} required inputMode="tel" onChange={setEngineeringValue("mobile")} />
+                    <FloatingField id="eng-email" label="البريد الإلكتروني" value={engineeringForm.email} error={engineeringErrors.email} type="email" onChange={setEngineeringValue("email")} />
+                    <FloatingField id="eng-nationalId" label="الرقم الوطني" value={engineeringForm.nationalId} error={engineeringErrors.nationalId} onChange={setEngineeringValue("nationalId")} />
+                    <FloatingField id="eng-city" label="المدينة" value={engineeringForm.city} error={engineeringErrors.city} onChange={setEngineeringValue("city")} />
+                    <FloatingField id="eng-address" label="العنوان" value={engineeringForm.address} error={engineeringErrors.address} onChange={setEngineeringValue("address")} />
+                  </div>
+                </motion.section>
+
+                <motion.section className="panel" {...sectionAnimation}>
+                  <h2>معلومات المشروع</h2>
+                  <div className="grid three">
+                    <FloatingField id="eng-projectName" label="اسم المشروع" value={engineeringForm.projectName} error={engineeringErrors.projectName} required onChange={setEngineeringValue("projectName")} />
+                    <FloatingField id="eng-projectType" label="نوع المشروع" value={engineeringForm.projectType} error={engineeringErrors.projectType} required onChange={setEngineeringValue("projectType")} />
+                    <FloatingField id="eng-projectLocation" label="موقع المشروع" value={engineeringForm.projectLocation} error={engineeringErrors.projectLocation} required onChange={setEngineeringValue("projectLocation")} />
+                    <FloatingField id="eng-contractValue" label="قيمة العقد" value={engineeringForm.contractValue} error={engineeringErrors.contractValue} required inputMode="decimal" onChange={setEngineeringValue("contractValue")} />
+                    <FloatingField id="eng-currency" label="العملة" value={engineeringForm.currency} error={engineeringErrors.currency} required onChange={setEngineeringValue("currency")} />
+                    <FloatingField id="eng-insuranceType" label="نوع التأمين" value={engineeringForm.insuranceType} error={engineeringErrors.insuranceType} required onChange={setEngineeringValue("insuranceType")} />
+                    <FloatingField id="eng-startDate" label="تاريخ بداية المشروع" value={engineeringForm.startDate} error={engineeringErrors.startDate} type="date" onChange={setEngineeringValue("startDate")} />
+                    <FloatingField id="eng-endDate" label="تاريخ نهاية المشروع" value={engineeringForm.endDate} error={engineeringErrors.endDate} type="date" onChange={setEngineeringValue("endDate")} />
+                    <FloatingField id="eng-contractorName" label="اسم المقاول" value={engineeringForm.contractorName} error={engineeringErrors.contractorName} onChange={setEngineeringValue("contractorName")} />
+                    <FloatingField id="eng-ownerName" label="اسم مالك المشروع" value={engineeringForm.ownerName} error={engineeringErrors.ownerName} onChange={setEngineeringValue("ownerName")} />
+                  </div>
+                </motion.section>
+
+                <motion.section className="panel" {...sectionAnimation}>
+                  <h2>تفاصيل إضافية</h2>
+                  <div className="grid two">
+                    <FloatingField id="eng-riskDetails" label="تفاصيل المخاطر" value={engineeringForm.riskDetails} error={engineeringErrors.riskDetails} multiline rows={6} onChange={setEngineeringValue("riskDetails")} />
+                    <FloatingField id="eng-notes" label="ملاحظات" value={engineeringForm.notes} error={engineeringErrors.notes} multiline rows={6} onChange={setEngineeringValue("notes")} />
+                  </div>
+                </motion.section>
+
+                <motion.section className="panel review-panel" {...sectionAnimation}>
+                  <h2>مراجعة الطلب</h2>
+                  <div className="review-grid">
+                    <span>العميل</span>
+                    <strong>{engineeringForm.fullName || "-"}</strong>
+                    <span>المشروع</span>
+                    <strong>{engineeringForm.projectName || "-"}</strong>
+                    <span>نوع التأمين</span>
+                    <strong>{engineeringForm.insuranceType || "-"}</strong>
+                    <span>قيمة العقد</span>
+                    <strong>{engineeringForm.contractValue ? `${engineeringForm.contractValue} ${engineeringForm.currency}` : "-"}</strong>
+                  </div>
+                  <label className={`confirm ${engineeringErrors.confirmed ? "field-error" : ""}`}>
+                    <input type="checkbox" checked={engineeringForm.confirmed} onChange={setEngineeringValue("confirmed")} />
+                    <span>أؤكد صحة المعلومات وأوافق على إرسال الطلب إلى TRINSU.</span>
+                  </label>
+                  {engineeringErrors.confirmed ? <p className="error-text">{engineeringErrors.confirmed}</p> : null}
+                  {engineeringSubmitError ? <p className="submit-error" role="alert">{engineeringSubmitError}</p> : null}
+                  <button className="submit-button" type="submit" disabled={isEngineeringSubmitting}>
+                    {isEngineeringSubmitting ? <span className="spinner" aria-hidden="true" /> : <CheckCircle2 size={20} aria-hidden="true" />}
+                    {isEngineeringSubmitting ? "جاري الإرسال" : "إرسال طلب التأمين"}
+                  </button>
+                </motion.section>
+
+                {engineeringRequest ? (
+                  <motion.section className="success-panel" role="status" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+                    <CheckCircle2 size={42} aria-hidden="true" />
+                    <h2>تم إرسال طلب التأمين الهندسي</h2>
+                    <p>تم تسجيل الطلب في نظام TRINSU بنجاح.</p>
+                    <div className="success-numbers">
+                      <div>
+                        <span>رقم الطلب</span>
+                        <strong>{engineeringRequest.requestNumber}</strong>
+                      </div>
+                      <div>
+                        <span>رقم التتبع</span>
+                        <strong>{engineeringRequest.trackingNumber}</strong>
+                      </div>
+                    </div>
+                    <div className="success-status">
+                      <span>الحالة</span>
+                      <strong>{engineeringRequest.status}</strong>
+                    </div>
+                  </motion.section>
+                ) : null}
+              </fieldset>
+            </form>
+          </>
         ) : null}
 
         {showSupportPage ? (

@@ -1062,6 +1062,62 @@ h1 {
   box-shadow: var(--shadow);
 }
 
+.engineering-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.38fr);
+  gap: 1rem;
+  align-items: stretch;
+  margin-bottom: 1.25rem;
+}
+
+.engineering-hero > div:first-child,
+.engineering-metrics {
+  padding: clamp(1.25rem, 3vw, 2rem);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.engineering-hero h1 {
+  margin-bottom: 0.75rem;
+  font-size: clamp(2rem, 5vw, 4rem);
+}
+
+.engineering-hero p {
+  margin: 0;
+  max-width: 70ch;
+  color: var(--muted);
+  font-size: 1.08rem;
+  line-height: 1.9;
+}
+
+.engineering-metrics {
+  display: grid;
+  align-content: center;
+  gap: 0.55rem;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--green) 14%, transparent), transparent),
+    var(--surface-strong);
+}
+
+.engineering-metrics span {
+  color: var(--gold);
+  font-size: clamp(2.2rem, 6vw, 4.4rem);
+  font-weight: 950;
+  line-height: 0.95;
+}
+
+.engineering-metrics strong {
+  color: var(--green-dark);
+  font-size: 1.1rem;
+}
+
+.engineering-metrics small {
+  color: var(--muted);
+  font-weight: 800;
+}
+
 .panel h2,
 .success-panel h2 {
   margin-bottom: 1.2rem;
@@ -1480,7 +1536,8 @@ h1 {
   }
 
   .support-page,
-  .support-grid {
+  .support-grid,
+  .engineering-hero {
     grid-template-columns: 1fr;
   }
 

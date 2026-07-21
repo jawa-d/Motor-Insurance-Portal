@@ -33,3 +33,25 @@ export type DocumentKey =
   | "backResidenceCard";
 
 export type Errors = Record<string, string | undefined>;
+
+export type EngineeringFormState = {
+  fullName: string;
+  mobile: string;
+  email: string;
+  nationalId: string;
+  address: string;
+  city: string;
+  projectName: string;
+  projectType: string;
+  projectLocation: string;
+  contractValue: string;
+  currency: string;
+  insuranceType: string;
+  startDate: string;
+  endDate: string;
+  contractorName: string;
+  ownerName: string;
+  riskDetails: string;
+  notes: string;
+  confirmed: boolean;
+};
