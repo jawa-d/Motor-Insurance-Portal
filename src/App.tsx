@@ -81,6 +81,7 @@ const getCurrentPage = (): Page => {
 };
 
 const trackingStatusIndex: Record<PublicMotorRequestStatus, number> = {
+  SUBMITTED: 0,
   RECEIVED: 0,
   UNDER_REVIEW: 1,
   DOCUMENTS_CHECK: 2,
@@ -91,6 +92,7 @@ const trackingStatusIndex: Record<PublicMotorRequestStatus, number> = {
 };
 
 const trackingStatusTheme: Record<PublicMotorRequestStatus, { color: string; name: string }> = {
+  SUBMITTED: { color: "#0f8a4b", name: "received" },
   RECEIVED: { color: "#0f8a4b", name: "received" },
   UNDER_REVIEW: { color: "#1b8b8f", name: "review" },
   DOCUMENTS_CHECK: { color: "#b7791f", name: "documents" },
@@ -102,6 +104,7 @@ const trackingStatusTheme: Record<PublicMotorRequestStatus, { color: string; nam
 
 const trackingStatusDescription: Record<Language, Record<PublicMotorRequestStatus, string>> = {
   ar: {
+    SUBMITTED: "تم استلام الطلب بنجاح وهو الآن ضمن قائمة المتابعة لدى فريق التأمين.",
     RECEIVED: "تم استلام الطلب بنجاح وهو الآن ضمن قائمة المتابعة لدى فريق التأمين.",
     UNDER_REVIEW: "الطلب قيد المراجعة، ويتم تدقيق المعلومات الأساسية قبل الانتقال للخطوة التالية.",
     DOCUMENTS_CHECK: "الفريق يتحقق من المستندات المرفوعة ويتأكد من وضوحها واكتمالها.",
@@ -111,6 +114,7 @@ const trackingStatusDescription: Record<Language, Record<PublicMotorRequestStatu
     REJECTED: "تم رفض الطلب. يرجى التواصل مع فريق الدعم لمعرفة السبب والخطوات الممكنة.",
   },
   en: {
+    SUBMITTED: "Your application was received successfully and is now queued with the insurance team.",
     RECEIVED: "Your application was received successfully and is now queued with the insurance team.",
     UNDER_REVIEW: "The application is under review while the team checks the core details.",
     DOCUMENTS_CHECK: "Uploaded documents are being checked for clarity and completeness.",
@@ -515,6 +519,13 @@ function App() {
       ? "ملخص الحالة الحالية وآخر تفاصيل الطلب المسجلة في النظام."
       : "A summary of the current status and the latest request details in the system.";
   const closeTrackingLabel = language === "ar" ? "إغلاق" : "Close";
+  const trackingSubjectLabel =
+    trackingLookup?.requestType === "engineering"
+      ? language === "ar"
+        ? "المشروع"
+        : "Project"
+      : t.vehicle;
+  const trackingSubjectValue = trackingLookup?.subject ?? trackingLookup?.vehicle ?? "-";
 
   return (
     <div className={`${darkMode ? "app dark" : "app"} ${isFormLocked ? "app-busy" : ""}`} dir={direction} lang={language}>
@@ -783,9 +794,27 @@ function App() {
                     <dd>{trackingLookup.customerName}</dd>
                   </div>
                   <div>
-                    <dt>{t.vehicle}</dt>
-                    <dd>{trackingLookup.vehicle}</dd>
+                    <dt>{trackingSubjectLabel}</dt>
+                    <dd>{trackingSubjectValue}</dd>
                   </div>
+                  {trackingLookup.requestType === "engineering" && trackingLookup.project?.type ? (
+                    <div>
+                      <dt>{language === "ar" ? "نوع المشروع" : "Project type"}</dt>
+                      <dd>{trackingLookup.project.type}</dd>
+                    </div>
+                  ) : null}
+                  {trackingLookup.requestType === "engineering" && trackingLookup.project?.insuranceType ? (
+                    <div>
+                      <dt>{language === "ar" ? "نوع التأمين" : "Insurance type"}</dt>
+                      <dd>{trackingLookup.project.insuranceType}</dd>
+                    </div>
+                  ) : null}
+                  {trackingLookup.requestType === "engineering" && trackingLookup.project?.location ? (
+                    <div>
+                      <dt>{language === "ar" ? "موقع المشروع" : "Project location"}</dt>
+                      <dd>{trackingLookup.project.location}</dd>
+                    </div>
+                  ) : null}
                   <div>
                     <dt>{t.updatedAt}</dt>
                     <dd>{trackingUpdatedAt}</dd>

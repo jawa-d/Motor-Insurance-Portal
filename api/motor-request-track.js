@@ -11,6 +11,14 @@ function getTrackingNumber(request) {
   return trackingNumber || null;
 }
 
+function normalizeTrackingPayload(payload, requestType) {
+  return {
+    ...payload,
+    requestType,
+    subject: payload.subject ?? payload.vehicle ?? payload.projectName ?? payload.project?.name,
+  };
+}
+
 export default async function handler(request, response) {
   if (request.method === "OPTIONS") {
     response.statusCode = 204;
@@ -37,21 +45,58 @@ export default async function handler(request, response) {
     return;
   }
 
-  const upstreamUrl = `${apiBaseUrl.replace(/\/$/, "")}/api/public/motor-requests/track/${encodeURIComponent(
-    trackingNumber,
-  )}`;
-
-  const upstreamResponse = await fetch(upstreamUrl, {
-    method: "GET",
-    headers: {
-      Accept: "application/json",
-      "x-api-key": apiKey,
+  const baseUrl = apiBaseUrl.replace(/\/$/, "");
+  const encodedTrackingNumber = encodeURIComponent(trackingNumber);
+  const upstreamTargets = [
+    {
+      type: "motor",
+      url: `${baseUrl}/api/public/motor-requests/track/${encodedTrackingNumber}`,
     },
-    redirect: "manual",
-  });
+    {
+      type: "engineering",
+      url: `${baseUrl}/api/v1/public/engineering-requests/track/${encodedTrackingNumber}`,
+    },
+    {
+      type: "engineering",
+      url: `${baseUrl}/api/v1/public/engineering-requests/${encodedTrackingNumber}`,
+    },
+  ];
 
-  const responseBody = await upstreamResponse.text();
-  response.statusCode = upstreamResponse.status;
-  response.setHeader("Content-Type", upstreamResponse.headers.get("content-type") ?? "application/json; charset=utf-8");
-  response.end(responseBody || "{}");
+  let lastResponseBody = "";
+  let lastStatus = 404;
+  let lastContentType = "application/json; charset=utf-8";
+
+  for (const target of upstreamTargets) {
+    const upstreamResponse = await fetch(target.url, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        "x-api-key": apiKey,
+      },
+      redirect: "manual",
+    });
+
+    const responseBody = await upstreamResponse.text();
+    lastResponseBody = responseBody;
+    lastStatus = upstreamResponse.status;
+    lastContentType = upstreamResponse.headers.get("content-type") ?? "application/json; charset=utf-8";
+
+    if (upstreamResponse.status === 404) {
+      continue;
+    }
+
+    if (upstreamResponse.ok && lastContentType.includes("application/json") && responseBody) {
+      sendJson(response, upstreamResponse.status, normalizeTrackingPayload(JSON.parse(responseBody), target.type));
+      return;
+    }
+
+    response.statusCode = upstreamResponse.status;
+    response.setHeader("Content-Type", lastContentType);
+    response.end(responseBody || "{}");
+    return;
+  }
+
+  response.statusCode = lastStatus;
+  response.setHeader("Content-Type", lastContentType);
+  response.end(lastResponseBody || JSON.stringify({ message: "Request was not found." }));
 }

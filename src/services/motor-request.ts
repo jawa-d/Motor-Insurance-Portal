@@ -1,6 +1,6 @@
 import { upload } from "@vercel/blob/client";
 import type { DocumentKey, FormState, UploadFile } from "../types";
-import { getJson, getPublicApiConfig, getSameOriginJson, postJson } from "./api";
+import { ApiError, getJson, getPublicApiConfig, getSameOriginJson, postJson } from "./api";
 
 const uploadEndpoint = "/api/public/motor-request-uploads";
 
@@ -31,6 +31,7 @@ type MotorRequestResponse = {
 };
 
 export type PublicMotorRequestStatus =
+  | "SUBMITTED"
   | "RECEIVED"
   | "UNDER_REVIEW"
   | "DOCUMENTS_CHECK"
@@ -46,7 +47,15 @@ export type MotorRequestTracking = {
   statusLabel: string;
   updatedAt: string;
   customerName: string;
-  vehicle: string;
+  vehicle?: string;
+  subject?: string;
+  requestType?: "motor" | "engineering" | "unknown";
+  project?: {
+    name?: string;
+    type?: string;
+    location?: string;
+    insuranceType?: string;
+  };
 };
 
 export type MotorRequestInput = {
@@ -232,6 +241,14 @@ function extractTrackingNumber(response: MotorRequestResponse) {
   );
 }
 
+function normalizeTrackingResponse(response: MotorRequestTracking, requestType: MotorRequestTracking["requestType"]) {
+  return {
+    ...response,
+    requestType,
+    subject: response.subject ?? response.vehicle ?? response.project?.name,
+  };
+}
+
 export async function submitMotorRequest(input: MotorRequestInput, options: MotorRequestSubmitOptions = {}) {
   const payload = buildPayload(input);
   const totalFiles = input.vehicleImages.length + Object.keys(documentPayloadKeyMap).filter((key) => input.documents[key as DocumentKey]).length;
@@ -305,7 +322,33 @@ export async function trackMotorRequest(trackingNumber: string) {
   const encodedTrackingNumber = encodeURIComponent(trackingNumber.trim());
 
   if (import.meta.env.DEV) {
-    return getJson<MotorRequestTracking>(`/api/public/motor-requests/track/${encodedTrackingNumber}`);
+    try {
+      const motorTracking = await getJson<MotorRequestTracking>(`/api/public/motor-requests/track/${encodedTrackingNumber}`);
+
+      return normalizeTrackingResponse(motorTracking, "motor");
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.status !== 404) {
+        throw error;
+      }
+    }
+
+    let engineeringTracking: MotorRequestTracking;
+
+    try {
+      engineeringTracking = await getJson<MotorRequestTracking>(
+        `/api/v1/public/engineering-requests/track/${encodedTrackingNumber}`,
+      );
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.status !== 404) {
+        throw error;
+      }
+
+      engineeringTracking = await getJson<MotorRequestTracking>(
+        `/api/v1/public/engineering-requests/${encodedTrackingNumber}`,
+      );
+    }
+
+    return normalizeTrackingResponse(engineeringTracking, "engineering");
   }
 
   return getSameOriginJson<MotorRequestTracking>(`/api/motor-request-track?trackingNumber=${encodedTrackingNumber}`);
