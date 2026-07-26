@@ -15,7 +15,7 @@ function normalizeTrackingPayload(payload, requestType) {
   return {
     ...payload,
     requestType,
-    subject: payload.subject ?? payload.vehicle ?? payload.projectName ?? payload.project?.name ?? payload.health?.planType ?? payload.property?.type ?? payload.accident?.insuredName ?? payload.travel?.destinationCountry,
+    subject: payload.subject ?? payload.vehicle ?? payload.projectName ?? payload.project?.name ?? payload.health?.planType ?? payload.property?.type ?? payload.accident?.insuredName ?? payload.travel?.destinationCountry ?? payload.transport?.cargoDescription,
   };
 }
 
@@ -91,6 +91,14 @@ export default async function handler(request, response) {
     {
       type: "travel",
       url: `${baseUrl}/api/v1/public/travel-requests/${encodedTrackingNumber}`,
+    },
+    {
+      type: "transport",
+      url: `${baseUrl}/api/v1/public/transport-requests/track/${encodedTrackingNumber}`,
+    },
+    {
+      type: "transport",
+      url: `${baseUrl}/api/v1/public/transport-requests/${encodedTrackingNumber}`,
     },
   ];
 

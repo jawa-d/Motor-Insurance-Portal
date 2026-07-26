@@ -157,3 +157,32 @@ export type TravelFormState = {
   notes: string;
   confirmed: boolean;
 };
+
+export type TransportFormState = {
+  fullName: string;
+  mobile: string;
+  email: string;
+  nationalId: string;
+  address: string;
+  city: string;
+  transportMode: string;
+  cargoDescription: string;
+  cargoValue: string;
+  currency: string;
+  originCountry: string;
+  originCity: string;
+  destinationCountry: string;
+  destinationCity: string;
+  departureDate: string;
+  arrivalDate: string;
+  carrierName: string;
+  vesselOrFlightNumber: string;
+  vehicleOrContainerNo: string;
+  packingType: string;
+  coverageScope: string;
+  hasWarRisk: boolean;
+  hasStrikeRisk: boolean;
+  estimatedPremium: string;
+  notes: string;
+  confirmed: boolean;
+};

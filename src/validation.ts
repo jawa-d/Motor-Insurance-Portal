@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { EngineeringFormState, FireTheftFormState, FormState, GeneralAccidentFormState, HealthFormState, TravelFormState } from "./types";
+import type { EngineeringFormState, FireTheftFormState, FormState, GeneralAccidentFormState, HealthFormState, TransportFormState, TravelFormState } from "./types";
 
 const requiredText = (message: string) => z.string().trim().min(1, message);
 
@@ -305,6 +305,67 @@ export const initialTravelForm: TravelFormState = {
   emergencyContactPhone: "",
   estimatedPremium: "",
   currency: "IQD",
+  notes: "",
+  confirmed: false,
+};
+
+export const createTransportSchema = (messages: {
+  fieldRequired: string;
+}) =>
+  z.object({
+    fullName: requiredText(messages.fieldRequired),
+    mobile: requiredText(messages.fieldRequired),
+    email: z.string(),
+    nationalId: requiredText(messages.fieldRequired),
+    address: z.string(),
+    city: requiredText(messages.fieldRequired),
+    transportMode: requiredText(messages.fieldRequired),
+    cargoDescription: requiredText(messages.fieldRequired),
+    cargoValue: requiredText(messages.fieldRequired),
+    currency: requiredText(messages.fieldRequired),
+    originCountry: requiredText(messages.fieldRequired),
+    originCity: requiredText(messages.fieldRequired),
+    destinationCountry: requiredText(messages.fieldRequired),
+    destinationCity: requiredText(messages.fieldRequired),
+    departureDate: requiredText(messages.fieldRequired),
+    arrivalDate: z.string(),
+    carrierName: z.string(),
+    vesselOrFlightNumber: z.string(),
+    vehicleOrContainerNo: z.string(),
+    packingType: z.string(),
+    coverageScope: requiredText(messages.fieldRequired),
+    hasWarRisk: z.boolean(),
+    hasStrikeRisk: z.boolean(),
+    estimatedPremium: z.string(),
+    notes: z.string(),
+    confirmed: z.boolean(),
+  });
+
+export const initialTransportForm: TransportFormState = {
+  fullName: "",
+  mobile: "",
+  email: "",
+  nationalId: "",
+  address: "",
+  city: "Baghdad",
+  transportMode: "SEA",
+  cargoDescription: "",
+  cargoValue: "",
+  currency: "IQD",
+  originCountry: "Iraq",
+  originCity: "Baghdad",
+  destinationCountry: "",
+  destinationCity: "",
+  departureDate: "",
+  arrivalDate: "",
+  carrierName: "",
+  vesselOrFlightNumber: "",
+  vehicleOrContainerNo: "",
+  packingType: "Containers",
+  coverageScope: "All risks during transit",
+  hasWarRisk: false,
+  hasStrikeRisk: false,
+  estimatedPremium: "",
   notes: "",
   confirmed: false,
 };

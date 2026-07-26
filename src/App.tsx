@@ -25,6 +25,7 @@ import {
   ShieldCheck,
   ShieldAlert,
   Sun,
+  Truck,
   X,
 } from "lucide-react";
 import { type CSSProperties, type ChangeEvent, useEffect, useMemo, useState } from "react";
@@ -39,6 +40,7 @@ import { submitFireTheftRequest } from "./services/fire-theft-request";
 import { submitGeneralAccidentRequest } from "./services/general-accident-request";
 import { submitHealthRequest } from "./services/health-request";
 import { submitTravelRequest } from "./services/travel-request";
+import { submitTransportRequest } from "./services/transport-request";
 import {
   submitMotorRequest,
   trackMotorRequest,
@@ -46,19 +48,21 @@ import {
   type MotorRequestUploadProgress,
   type PublicMotorRequestStatus,
 } from "./services/motor-request";
-import type { DocumentKey, EngineeringFormState, Errors, FireTheftFormState, FormState, GeneralAccidentFormState, HealthFormState, TravelFormState, UploadFile } from "./types";
+import type { DocumentKey, EngineeringFormState, Errors, FireTheftFormState, FormState, GeneralAccidentFormState, HealthFormState, TransportFormState, TravelFormState, UploadFile } from "./types";
 import {
   createEngineeringSchema,
   createFireTheftSchema,
   createGeneralAccidentSchema,
   createHealthSchema,
   createSchema,
+  createTransportSchema,
   createTravelSchema,
   initialEngineeringForm,
   initialFireTheftForm,
   initialForm,
   initialGeneralAccidentForm,
   initialHealthForm,
+  initialTransportForm,
   initialTravelForm,
 } from "./validation";
 
@@ -89,7 +93,7 @@ const supportWhatsApp = [
 const fallbackFormUrl =
   "https://docs.google.com/forms/d/e/1FAIpQLSc_xrj87VpZj0VRte-KCnaidxUUIVx1t5brl7NaBVJXRls_qA/viewform?usp=publish-editor";
 
-type Page = "home" | "motor" | "engineering" | "health" | "fire-theft" | "general-accident" | "travel" | "track" | "support";
+type Page = "home" | "motor" | "engineering" | "health" | "fire-theft" | "general-accident" | "travel" | "transport" | "track" | "support";
 
 const getCurrentPage = (): Page => {
   const path = window.location.pathname.replace(/\/+$/, "");
@@ -102,6 +106,7 @@ const getCurrentPage = (): Page => {
   if (path === "/fire-theft") return "fire-theft";
   if (path === "/general-accident") return "general-accident";
   if (path === "/travel") return "travel";
+  if (path === "/transport") return "transport";
 
   return "home";
 };
@@ -161,6 +166,7 @@ function App() {
   const [fireTheftForm, setFireTheftForm] = useState<FireTheftFormState>(initialFireTheftForm);
   const [generalAccidentForm, setGeneralAccidentForm] = useState<GeneralAccidentFormState>(initialGeneralAccidentForm);
   const [travelForm, setTravelForm] = useState<TravelFormState>(initialTravelForm);
+  const [transportForm, setTransportForm] = useState<TransportFormState>(initialTransportForm);
   const [vehicleImages, setVehicleImages] = useState<UploadFile[]>([]);
   const [documents, setDocuments] = useState<Partial<Record<DocumentKey, UploadFile>>>({});
   const [errors, setErrors] = useState<Errors>({});
@@ -193,6 +199,10 @@ function App() {
   const [travelSubmitError, setTravelSubmitError] = useState<string | null>(null);
   const [travelRequest, setTravelRequest] = useState<{ requestNumber: string; trackingNumber: string; status: string } | null>(null);
   const [isTravelSubmitting, setIsTravelSubmitting] = useState(false);
+  const [transportErrors, setTransportErrors] = useState<Errors>({});
+  const [transportSubmitError, setTransportSubmitError] = useState<string | null>(null);
+  const [transportRequest, setTransportRequest] = useState<{ requestNumber: string; trackingNumber: string; status: string } | null>(null);
+  const [isTransportSubmitting, setIsTransportSubmitting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<MotorRequestUploadProgress | null>(null);
 
@@ -206,6 +216,7 @@ function App() {
   const showFireTheftPage = page === "fire-theft";
   const showGeneralAccidentPage = page === "general-accident";
   const showTravelPage = page === "travel";
+  const showTransportPage = page === "transport";
   const showTrackingPage = page === "track";
   const showSupportPage = page === "support";
 
@@ -290,6 +301,13 @@ function App() {
       }),
     [t],
   );
+  const transportSchema = useMemo(
+    () =>
+      createTransportSchema({
+        fieldRequired: t.fieldRequired,
+      }),
+    [t],
+  );
 
   useEffect(() => {
     const updatePage = () => {
@@ -367,6 +385,12 @@ function App() {
     const value = event.target.type === "checkbox" ? (event.target as HTMLInputElement).checked : event.target.value;
     setTravelForm((current) => ({ ...current, [key]: value }));
     setTravelErrors((current) => ({ ...current, [key]: undefined }));
+  };
+
+  const setTransportValue = (key: keyof TransportFormState) => (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const value = event.target.type === "checkbox" ? (event.target as HTMLInputElement).checked : event.target.value;
+    setTransportForm((current) => ({ ...current, [key]: value }));
+    setTransportErrors((current) => ({ ...current, [key]: undefined }));
   };
 
   const getTrackingErrorMessage = (error: unknown) => {
@@ -811,6 +835,55 @@ function App() {
     }
   };
 
+  const submitTransport = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (isTransportSubmitting) return;
+
+    const parsed = transportSchema.safeParse(transportForm);
+    const nextErrors: Errors = {};
+    setTransportSubmitError(null);
+    setTransportRequest(null);
+
+    if (!parsed.success) {
+      for (const issue of parsed.error.issues) {
+        nextErrors[String(issue.path[0])] = issue.message;
+      }
+    }
+
+    if (!transportForm.confirmed) {
+      nextErrors.confirmed = t.fieldRequired;
+    }
+
+    setTransportErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length > 0) {
+      const firstErrorKey = Object.keys(nextErrors)[0];
+      window.setTimeout(() => {
+        document.getElementById(`transport-${firstErrorKey}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 0);
+      return;
+    }
+
+    try {
+      setIsTransportSubmitting(true);
+      const result = await submitTransportRequest(transportForm, agentCode);
+      setTransportRequest(result);
+      setTransportForm(initialTransportForm);
+      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : getSubmitErrorMessage(error);
+      setTransportSubmitError(message || getSubmitErrorMessage(error));
+      window.setTimeout(() => {
+        document.getElementById("transport-submit-error")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 0);
+    } finally {
+      setIsTransportSubmitting(false);
+    }
+  };
+
   const trackingActiveIndex = trackingLookup ? trackingStatusIndex[trackingLookup.status] : 0;
   const trackingUpdatedAt = trackingLookup
     ? new Intl.DateTimeFormat(language === "ar" ? "ar-IQ" : "en", {
@@ -847,8 +920,12 @@ function App() {
         ? language === "ar"
           ? "الوجهة"
           : "Destination"
+      : trackingLookup?.requestType === "transport"
+        ? language === "ar"
+          ? "الشحنة"
+          : "Cargo"
       : t.vehicle;
-  const trackingSubjectValue = trackingLookup?.subject ?? trackingLookup?.vehicle ?? trackingLookup?.health?.planType ?? trackingLookup?.property?.type ?? trackingLookup?.accident?.insuredName ?? trackingLookup?.travel?.destinationCountry ?? "-";
+  const trackingSubjectValue = trackingLookup?.subject ?? trackingLookup?.vehicle ?? trackingLookup?.health?.planType ?? trackingLookup?.property?.type ?? trackingLookup?.accident?.insuredName ?? trackingLookup?.travel?.destinationCountry ?? trackingLookup?.transport?.cargoDescription ?? "-";
 
   return (
     <div className={`${darkMode ? "app dark" : "app"} ${isFormLocked ? "app-busy" : ""}`} dir={direction} lang={language}>
@@ -915,6 +992,10 @@ function App() {
           <a className={navClass("travel")} href="/travel" onClick={navigate("travel")}>
             <Plane size={18} aria-hidden="true" />
             سفر
+          </a>
+          <a className={navClass("transport")} href="/transport" onClick={navigate("transport")}>
+            <Truck size={18} aria-hidden="true" />
+            نقل
           </a>
           <a className={navClass("track")} href="/track" onClick={navigate("track")}>
             <MapPinned size={18} aria-hidden="true" />
@@ -992,6 +1073,10 @@ function App() {
               <Plane size={20} aria-hidden="true" />
               طلب تأمين سفر
             </a>
+            <a className="ghost-link" href="/transport" onClick={navigate("transport")}>
+              <Truck size={20} aria-hidden="true" />
+              طلب تأمين نقل
+            </a>
             <a className="ghost-link" href="/track" onClick={navigate("track")}>
               <MapPinned size={20} aria-hidden="true" />
               {t.trackRequest}
@@ -1061,6 +1146,12 @@ function App() {
             <h2>تأمين السفر</h2>
             <p>سجّل بيانات المسافر والوجهة وتواريخ الرحلة ونوع التغطية لإرسال طلب تأمين سفر.</p>
             <a href="/travel" onClick={navigate("travel")}>فتح الفورمة</a>
+          </article>
+          <article>
+            <span><Truck size={22} aria-hidden="true" /></span>
+            <h2>تأمين النقل</h2>
+            <p>سجل بيانات الشحنة ومسار النقل وقيمة البضاعة ونطاق التغطية لإرسال طلب تأمين نقل جديد.</p>
+            <a href="/transport" onClick={navigate("transport")}>فتح الفورمة</a>
           </article>
           <article>
             <span><MapPinned size={22} aria-hidden="true" /></span>
@@ -1254,6 +1345,24 @@ function App() {
                     <div>
                       <dt>{language === "ar" ? "عدد المسافرين" : "Travelers"}</dt>
                       <dd>{trackingLookup.travel.travelersCount}</dd>
+                    </div>
+                  ) : null}
+                  {trackingLookup.requestType === "transport" && trackingLookup.transport?.transportMode ? (
+                    <div>
+                      <dt>{language === "ar" ? "نوع النقل" : "Transport mode"}</dt>
+                      <dd>{trackingLookup.transport.transportMode}</dd>
+                    </div>
+                  ) : null}
+                  {trackingLookup.requestType === "transport" && trackingLookup.transport?.cargoValue ? (
+                    <div>
+                      <dt>{language === "ar" ? "قيمة الشحنة" : "Cargo value"}</dt>
+                      <dd>{`${trackingLookup.transport.cargoValue} ${trackingLookup.transport.currency ?? ""}`.trim()}</dd>
+                    </div>
+                  ) : null}
+                  {trackingLookup.requestType === "transport" && (trackingLookup.transport?.originCity || trackingLookup.transport?.destinationCity) ? (
+                    <div>
+                      <dt>{language === "ar" ? "المسار" : "Route"}</dt>
+                      <dd>{[trackingLookup.transport.originCity, trackingLookup.transport.destinationCity].filter(Boolean).join(" - ")}</dd>
                     </div>
                   ) : null}
                   <div>
@@ -1865,6 +1974,144 @@ function App() {
                     </div>
                     <div className="success-actions">
                       <button className="submit-button" type="button" onClick={() => openTrackingRequest(travelRequest.trackingNumber)}>
+                        <MapPinned size={18} aria-hidden="true" />
+                        تتبع الطلب
+                      </button>
+                    </div>
+                  </motion.section>
+                ) : null}
+              </fieldset>
+            </form>
+          </>
+        ) : null}
+
+        {showTransportPage ? (
+          <>
+            <motion.section className="engineering-hero" {...sectionAnimation}>
+              <div>
+                <span className="eyebrow">
+                  <Truck size={18} aria-hidden="true" />
+                  تأمين النقل
+                </span>
+                <h1>طلب تأمين نقل</h1>
+                <p>أدخل بيانات العميل والشحنة ومسار النقل ونطاق التغطية ليتم تسجيل الطلب ومتابعته داخل نظام TRINSU.</p>
+              </div>
+              <div className="engineering-metrics" aria-hidden="true">
+                <span>TRN</span>
+                <strong>Transport Insurance</strong>
+                <small>Cargo transit request</small>
+              </div>
+            </motion.section>
+
+            <form id="transport-request-form" className="request-form" onSubmit={submitTransport} noValidate>
+              <fieldset className="form-fieldset" disabled={isTransportSubmitting}>
+                <motion.section className="panel" {...sectionAnimation}>
+                  <h2>معلومات العميل</h2>
+                  <div className="grid three">
+                    <FloatingField id="transport-fullName" label="الاسم الكامل" value={transportForm.fullName} error={transportErrors.fullName} required onChange={setTransportValue("fullName")} />
+                    <FloatingField id="transport-mobile" label="رقم الموبايل" value={transportForm.mobile} error={transportErrors.mobile} required inputMode="tel" onChange={setTransportValue("mobile")} />
+                    <FloatingField id="transport-email" label="البريد الإلكتروني" value={transportForm.email} error={transportErrors.email} type="email" onChange={setTransportValue("email")} />
+                    <FloatingField id="transport-nationalId" label="الرقم الوطني" value={transportForm.nationalId} error={transportErrors.nationalId} required onChange={setTransportValue("nationalId")} />
+                    <FloatingField id="transport-city" label="المدينة" value={transportForm.city} error={transportErrors.city} required onChange={setTransportValue("city")} />
+                    <FloatingField id="transport-address" label="العنوان" value={transportForm.address} error={transportErrors.address} onChange={setTransportValue("address")} />
+                  </div>
+                </motion.section>
+
+                <motion.section className="panel" {...sectionAnimation}>
+                  <h2>تفاصيل الشحنة</h2>
+                  <div className="grid three">
+                    <label className="floating-field">
+                      <select id="transport-transportMode" value={transportForm.transportMode} onChange={setTransportValue("transportMode")} required>
+                        <option value="SEA">SEA</option>
+                        <option value="AIR">AIR</option>
+                        <option value="LAND">LAND</option>
+                      </select>
+                      <span>نوع النقل</span>
+                    </label>
+                    <FloatingField id="transport-cargoDescription" label="وصف الشحنة" value={transportForm.cargoDescription} error={transportErrors.cargoDescription} required onChange={setTransportValue("cargoDescription")} />
+                    <FloatingField id="transport-cargoValue" label="قيمة الشحنة" value={transportForm.cargoValue} error={transportErrors.cargoValue} required inputMode="decimal" onChange={setTransportValue("cargoValue")} />
+                    <FloatingField id="transport-currency" label="العملة" value={transportForm.currency} error={transportErrors.currency} required onChange={setTransportValue("currency")} />
+                    <FloatingField id="transport-packingType" label="نوع التغليف" value={transportForm.packingType} error={transportErrors.packingType} onChange={setTransportValue("packingType")} />
+                    <FloatingField id="transport-coverageScope" label="نطاق التغطية" value={transportForm.coverageScope} error={transportErrors.coverageScope} required onChange={setTransportValue("coverageScope")} />
+                    <FloatingField id="transport-estimatedPremium" label="القسط المتوقع" value={transportForm.estimatedPremium} error={transportErrors.estimatedPremium} inputMode="decimal" onChange={setTransportValue("estimatedPremium")} />
+                  </div>
+                </motion.section>
+
+                <motion.section className="panel" {...sectionAnimation}>
+                  <h2>مسار النقل</h2>
+                  <div className="grid three">
+                    <FloatingField id="transport-originCountry" label="بلد الانطلاق" value={transportForm.originCountry} error={transportErrors.originCountry} required onChange={setTransportValue("originCountry")} />
+                    <FloatingField id="transport-originCity" label="مدينة الانطلاق" value={transportForm.originCity} error={transportErrors.originCity} required onChange={setTransportValue("originCity")} />
+                    <FloatingField id="transport-destinationCountry" label="بلد الوصول" value={transportForm.destinationCountry} error={transportErrors.destinationCountry} required onChange={setTransportValue("destinationCountry")} />
+                    <FloatingField id="transport-destinationCity" label="مدينة الوصول" value={transportForm.destinationCity} error={transportErrors.destinationCity} required onChange={setTransportValue("destinationCity")} />
+                    <FloatingField id="transport-departureDate" label="تاريخ الانطلاق" value={transportForm.departureDate} error={transportErrors.departureDate} required type="date" onChange={setTransportValue("departureDate")} />
+                    <FloatingField id="transport-arrivalDate" label="تاريخ الوصول" value={transportForm.arrivalDate} error={transportErrors.arrivalDate} type="date" onChange={setTransportValue("arrivalDate")} />
+                    <FloatingField id="transport-carrierName" label="اسم الناقل" value={transportForm.carrierName} error={transportErrors.carrierName} onChange={setTransportValue("carrierName")} />
+                    <FloatingField id="transport-vesselOrFlightNumber" label="رقم السفينة/الرحلة" value={transportForm.vesselOrFlightNumber} error={transportErrors.vesselOrFlightNumber} onChange={setTransportValue("vesselOrFlightNumber")} />
+                    <FloatingField id="transport-vehicleOrContainerNo" label="رقم المركبة/الحاوية" value={transportForm.vehicleOrContainerNo} error={transportErrors.vehicleOrContainerNo} onChange={setTransportValue("vehicleOrContainerNo")} />
+                  </div>
+                </motion.section>
+
+                <motion.section className="panel" {...sectionAnimation}>
+                  <h2>المخاطر والملاحظات</h2>
+                  <div className="grid two">
+                    <label className="confirm compact-confirm">
+                      <input type="checkbox" checked={transportForm.hasWarRisk} onChange={setTransportValue("hasWarRisk")} />
+                      <span>إضافة خطر الحرب</span>
+                    </label>
+                    <label className="confirm compact-confirm">
+                      <input type="checkbox" checked={transportForm.hasStrikeRisk} onChange={setTransportValue("hasStrikeRisk")} />
+                      <span>إضافة خطر الإضرابات</span>
+                    </label>
+                    <FloatingField id="transport-notes" label="ملاحظات" value={transportForm.notes} error={transportErrors.notes} multiline rows={5} onChange={setTransportValue("notes")} />
+                  </div>
+                </motion.section>
+
+                <motion.section className="panel review-panel" {...sectionAnimation}>
+                  <h2>مراجعة الطلب</h2>
+                  <div className="review-grid">
+                    <span>العميل</span>
+                    <strong>{transportForm.fullName || "-"}</strong>
+                    <span>الشحنة</span>
+                    <strong>{transportForm.cargoDescription || "-"}</strong>
+                    <span>المسار</span>
+                    <strong>{[transportForm.originCity, transportForm.destinationCity].filter(Boolean).join(" - ") || "-"}</strong>
+                    <span>نوع النقل</span>
+                    <strong>{transportForm.transportMode || "-"}</strong>
+                  </div>
+                  <label className={`confirm ${transportErrors.confirmed ? "field-error" : ""}`}>
+                    <input type="checkbox" checked={transportForm.confirmed} onChange={setTransportValue("confirmed")} />
+                    <span>أؤكد صحة المعلومات وأوافق على إرسال طلب تأمين النقل إلى TRINSU.</span>
+                  </label>
+                  {transportErrors.confirmed ? <p className="error-text">{transportErrors.confirmed}</p> : null}
+                  {transportSubmitError ? <p id="transport-submit-error" className="submit-error" role="alert">{transportSubmitError}</p> : null}
+                  <button className="submit-button" type="submit" disabled={isTransportSubmitting}>
+                    {isTransportSubmitting ? <span className="spinner" aria-hidden="true" /> : <CheckCircle2 size={20} aria-hidden="true" />}
+                    {isTransportSubmitting ? "جاري الإرسال" : "إرسال طلب تأمين النقل"}
+                  </button>
+                </motion.section>
+
+                {transportRequest ? (
+                  <motion.section className="success-panel" role="status" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+                    <CheckCircle2 size={42} aria-hidden="true" />
+                    <h2>تم إرسال طلب تأمين النقل</h2>
+                    <p>تم تسجيل الطلب في نظام TRINSU بنجاح.</p>
+                    <div className="success-numbers">
+                      <div>
+                        <span>رقم الطلب</span>
+                        <strong>{transportRequest.requestNumber}</strong>
+                      </div>
+                      <div>
+                        <span>رقم التتبع</span>
+                        <strong>{transportRequest.trackingNumber}</strong>
+                      </div>
+                    </div>
+                    <div className="success-status">
+                      <span>الحالة</span>
+                      <strong>{transportRequest.status}</strong>
+                    </div>
+                    <div className="success-actions">
+                      <button className="submit-button" type="button" onClick={() => openTrackingRequest(transportRequest.trackingNumber)}>
                         <MapPinned size={18} aria-hidden="true" />
                         تتبع الطلب
                       </button>
