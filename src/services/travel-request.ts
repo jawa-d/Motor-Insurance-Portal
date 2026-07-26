@@ -68,11 +68,15 @@ function toIsoDate(value: string) {
   return value ? new Date(value).toISOString() : undefined;
 }
 
+function createSubmissionToken() {
+  return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
 export async function submitTravelRequest(form: TravelFormState, agentCode?: string) {
   const estimatedPremium = toOptionalNumber(form.estimatedPremium, "travel.estimatedPremium");
 
   const payload = {
-    submissionToken: typeof crypto.randomUUID === "function" ? crypto.randomUUID() : undefined,
+    submissionToken: createSubmissionToken(),
     customer: {
       fullName: form.fullName.trim(),
       mobile: form.mobile.trim(),
@@ -92,9 +96,9 @@ export async function submitTravelRequest(form: TravelFormState, agentCode?: str
       coverageType: form.coverageType.trim(),
       coverageScope: form.coverageScope.trim(),
       hasMedicalConditions: form.hasMedicalConditions,
-      ...(cleanOptional(form.medicalConditions) ? { medicalConditions: cleanOptional(form.medicalConditions) } : {}),
-      ...(cleanOptional(form.emergencyContactName) ? { emergencyContactName: cleanOptional(form.emergencyContactName) } : {}),
-      ...(cleanOptional(form.emergencyContactPhone) ? { emergencyContactPhone: cleanOptional(form.emergencyContactPhone) } : {}),
+      medicalConditions: form.medicalConditions.trim(),
+      emergencyContactName: form.emergencyContactName.trim(),
+      emergencyContactPhone: form.emergencyContactPhone.trim(),
       ...(estimatedPremium !== undefined ? { estimatedPremium } : {}),
       currency: form.currency.trim() || "IQD",
     },

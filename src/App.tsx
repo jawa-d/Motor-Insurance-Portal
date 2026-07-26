@@ -780,7 +780,13 @@ function App() {
 
     setTravelErrors(nextErrors);
 
-    if (Object.keys(nextErrors).length > 0) return;
+    if (Object.keys(nextErrors).length > 0) {
+      const firstErrorKey = Object.keys(nextErrors)[0];
+      window.setTimeout(() => {
+        document.getElementById(`travel-${firstErrorKey}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 0);
+      return;
+    }
 
     try {
       setIsTravelSubmitting(true);
