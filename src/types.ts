@@ -55,3 +55,30 @@ export type EngineeringFormState = {
   notes: string;
   confirmed: boolean;
 };
+
+export type HealthFormState = {
+  fullName: string;
+  mobile: string;
+  email: string;
+  nationalId: string;
+  address: string;
+  city: string;
+  age: string;
+  gender: string;
+  planType: string;
+  coverageScope: string;
+  insuredMembersCount: string;
+  companyName: string;
+  occupation: string;
+  hasChronicConditions: boolean;
+  chronicConditions: string;
+  previousInsurance: boolean;
+  previousInsurer: string;
+  preferredHospitals: string;
+  coverageStartDate: string;
+  coverageEndDate: string;
+  estimatedAnnualPremium: string;
+  currency: string;
+  notes: string;
+  confirmed: boolean;
+};

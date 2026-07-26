@@ -11,6 +11,7 @@ import {
   ExternalLink,
   FileSearch,
   Globe2,
+  HeartPulse,
   Info,
   Mail,
   MapPin,
@@ -30,6 +31,7 @@ import { UploadZone } from "./components/UploadZone";
 import { translations, type Language } from "./i18n";
 import { ApiError } from "./services/api";
 import { submitEngineeringRequest } from "./services/engineering-request";
+import { submitHealthRequest } from "./services/health-request";
 import {
   submitMotorRequest,
   trackMotorRequest,
@@ -37,8 +39,8 @@ import {
   type MotorRequestUploadProgress,
   type PublicMotorRequestStatus,
 } from "./services/motor-request";
-import type { DocumentKey, EngineeringFormState, Errors, FormState, UploadFile } from "./types";
-import { createEngineeringSchema, createSchema, initialEngineeringForm, initialForm } from "./validation";
+import type { DocumentKey, EngineeringFormState, Errors, FormState, HealthFormState, UploadFile } from "./types";
+import { createEngineeringSchema, createHealthSchema, createSchema, initialEngineeringForm, initialForm, initialHealthForm } from "./validation";
 
 const documentKeys: DocumentKey[] = [
   "frontNationalId",
@@ -67,7 +69,7 @@ const supportWhatsApp = [
 const fallbackFormUrl =
   "https://docs.google.com/forms/d/e/1FAIpQLSc_xrj87VpZj0VRte-KCnaidxUUIVx1t5brl7NaBVJXRls_qA/viewform?usp=publish-editor";
 
-type Page = "home" | "motor" | "engineering" | "track" | "support";
+type Page = "home" | "motor" | "engineering" | "health" | "track" | "support";
 
 const getCurrentPage = (): Page => {
   const path = window.location.pathname.replace(/\/+$/, "");
@@ -76,6 +78,7 @@ const getCurrentPage = (): Page => {
   if (path === "/support") return "support";
   if (path === "/motor") return "motor";
   if (path === "/engineering") return "engineering";
+  if (path === "/health") return "health";
 
   return "home";
 };
@@ -131,6 +134,7 @@ function App() {
   const [page, setPage] = useState<Page>(getCurrentPage);
   const [form, setForm] = useState<FormState>(initialForm);
   const [engineeringForm, setEngineeringForm] = useState<EngineeringFormState>(initialEngineeringForm);
+  const [healthForm, setHealthForm] = useState<HealthFormState>(initialHealthForm);
   const [vehicleImages, setVehicleImages] = useState<UploadFile[]>([]);
   const [documents, setDocuments] = useState<Partial<Record<DocumentKey, UploadFile>>>({});
   const [errors, setErrors] = useState<Errors>({});
@@ -147,6 +151,10 @@ function App() {
   const [engineeringSubmitError, setEngineeringSubmitError] = useState<string | null>(null);
   const [engineeringRequest, setEngineeringRequest] = useState<{ requestNumber: string; trackingNumber: string; status: string } | null>(null);
   const [isEngineeringSubmitting, setIsEngineeringSubmitting] = useState(false);
+  const [healthErrors, setHealthErrors] = useState<Errors>({});
+  const [healthSubmitError, setHealthSubmitError] = useState<string | null>(null);
+  const [healthRequest, setHealthRequest] = useState<{ requestNumber: string; trackingNumber: string; status: string } | null>(null);
+  const [isHealthSubmitting, setIsHealthSubmitting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<MotorRequestUploadProgress | null>(null);
 
@@ -156,6 +164,7 @@ function App() {
   const showHome = page === "home";
   const showMotorPage = page === "motor";
   const showEngineeringPage = page === "engineering";
+  const showHealthPage = page === "health";
   const showTrackingPage = page === "track";
   const showSupportPage = page === "support";
 
@@ -212,6 +221,13 @@ function App() {
       }),
     [t],
   );
+  const healthSchema = useMemo(
+    () =>
+      createHealthSchema({
+        fieldRequired: t.fieldRequired,
+      }),
+    [t],
+  );
 
   useEffect(() => {
     const updatePage = () => setPage(getCurrentPage());
@@ -243,6 +259,12 @@ function App() {
     const value = event.target.type === "checkbox" ? (event.target as HTMLInputElement).checked : event.target.value;
     setEngineeringForm((current) => ({ ...current, [key]: value }));
     setEngineeringErrors((current) => ({ ...current, [key]: undefined }));
+  };
+
+  const setHealthValue = (key: keyof HealthFormState) => (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const value = event.target.type === "checkbox" ? (event.target as HTMLInputElement).checked : event.target.value;
+    setHealthForm((current) => ({ ...current, [key]: value }));
+    setHealthErrors((current) => ({ ...current, [key]: undefined }));
   };
 
   const getTrackingErrorMessage = (error: unknown) => {
@@ -504,6 +526,50 @@ function App() {
     }
   };
 
+  const submitHealth = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (isHealthSubmitting) return;
+
+    const parsed = healthSchema.safeParse(healthForm);
+    const nextErrors: Errors = {};
+    setHealthSubmitError(null);
+    setHealthRequest(null);
+
+    if (!parsed.success) {
+      for (const issue of parsed.error.issues) {
+        nextErrors[String(issue.path[0])] = issue.message;
+      }
+    }
+
+    if (!healthForm.confirmed) {
+      nextErrors.confirmed = t.fieldRequired;
+    }
+
+    if (healthForm.hasChronicConditions && !healthForm.chronicConditions.trim()) {
+      nextErrors.chronicConditions = t.fieldRequired;
+    }
+
+    if (healthForm.previousInsurance && !healthForm.previousInsurer.trim()) {
+      nextErrors.previousInsurer = t.fieldRequired;
+    }
+
+    setHealthErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length > 0) return;
+
+    try {
+      setIsHealthSubmitting(true);
+      const result = await submitHealthRequest(healthForm, agentCode);
+      setHealthRequest(result);
+      setHealthForm(initialHealthForm);
+      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+    } catch (error) {
+      setHealthSubmitError(getSubmitErrorMessage(error));
+    } finally {
+      setIsHealthSubmitting(false);
+    }
+  };
+
   const trackingActiveIndex = trackingLookup ? trackingStatusIndex[trackingLookup.status] : 0;
   const trackingUpdatedAt = trackingLookup
     ? new Intl.DateTimeFormat(language === "ar" ? "ar-IQ" : "en", {
@@ -573,6 +639,10 @@ function App() {
             <Building2 size={18} aria-hidden="true" />
             تأمين هندسي
           </a>
+          <a className="icon-button" href="/health" onClick={navigate("health")}>
+            <HeartPulse size={18} aria-hidden="true" />
+            تأمين صحي
+          </a>
           <a className="icon-button" href="/support" onClick={navigate("support")}>
             <Phone size={18} aria-hidden="true" />
             {t.support}
@@ -629,6 +699,10 @@ function App() {
               <Building2 size={20} aria-hidden="true" />
               طلب تأمين هندسي
             </a>
+            <a className="ghost-link" href="/health" onClick={navigate("health")}>
+              <HeartPulse size={20} aria-hidden="true" />
+              طلب تأمين صحي
+            </a>
             <a className="ghost-link" href="/track" onClick={navigate("track")}>
               <MapPinned size={20} aria-hidden="true" />
               {t.trackRequest}
@@ -674,6 +748,12 @@ function App() {
             <h2>التأمين الهندسي</h2>
             <p>قدّم تفاصيل المشروع وقيمة العقد ونوع التغطية ليتم تسجيل طلب هندسي جديد.</p>
             <a href="/engineering" onClick={navigate("engineering")}>فتح الفورمة</a>
+          </article>
+          <article>
+            <span><HeartPulse size={22} aria-hidden="true" /></span>
+            <h2>التأمين الصحي</h2>
+            <p>قدّم بيانات العميل وخطة التغطية وعدد المؤمنين والحالة الصحية لإرسال طلب صحي جديد إلى النظام.</p>
+            <a href="/health" onClick={navigate("health")}>فتح الفورمة</a>
           </article>
           <article>
             <span><MapPinned size={22} aria-hidden="true" /></span>
@@ -945,6 +1025,123 @@ function App() {
                     <div className="success-status">
                       <span>الحالة</span>
                       <strong>{engineeringRequest.status}</strong>
+                    </div>
+                  </motion.section>
+                ) : null}
+              </fieldset>
+            </form>
+          </>
+        ) : null}
+
+        {showHealthPage ? (
+          <>
+            <motion.section className="engineering-hero health-hero" {...sectionAnimation}>
+              <div>
+                <span className="eyebrow">
+                  <HeartPulse size={18} aria-hidden="true" />
+                  طلبات التأمين الصحي
+                </span>
+                <h1>طلب تأمين صحي</h1>
+                <p>أدخل بيانات العميل وخطة التغطية الصحية ليتم تسجيل الطلب ومتابعته داخل النظام.</p>
+              </div>
+              <div className="engineering-metrics health-metrics" aria-hidden="true">
+                <span>HLT</span>
+                <strong>Health Insurance</strong>
+                <small>Medical coverage request</small>
+              </div>
+            </motion.section>
+
+            <form id="health-request-form" className="request-form" onSubmit={submitHealth} noValidate>
+              <fieldset className="form-fieldset" disabled={isHealthSubmitting}>
+                <motion.section className="panel" {...sectionAnimation}>
+                  <h2>معلومات العميل</h2>
+                  <div className="grid three">
+                    <FloatingField id="health-fullName" label="الاسم الكامل" value={healthForm.fullName} error={healthErrors.fullName} required onChange={setHealthValue("fullName")} />
+                    <FloatingField id="health-mobile" label="رقم الموبايل" value={healthForm.mobile} error={healthErrors.mobile} required inputMode="tel" onChange={setHealthValue("mobile")} />
+                    <FloatingField id="health-email" label="البريد الإلكتروني" value={healthForm.email} error={healthErrors.email} type="email" onChange={setHealthValue("email")} />
+                    <FloatingField id="health-nationalId" label="الرقم الوطني" value={healthForm.nationalId} error={healthErrors.nationalId} required onChange={setHealthValue("nationalId")} />
+                    <FloatingField id="health-age" label="العمر" value={healthForm.age} error={healthErrors.age} required inputMode="numeric" onChange={setHealthValue("age")} />
+                    <FloatingField id="health-gender" label="الجنس" value={healthForm.gender} error={healthErrors.gender} required onChange={setHealthValue("gender")} />
+                    <FloatingField id="health-city" label="المدينة" value={healthForm.city} error={healthErrors.city} required onChange={setHealthValue("city")} />
+                    <FloatingField id="health-address" label="العنوان" value={healthForm.address} error={healthErrors.address} onChange={setHealthValue("address")} />
+                    <FloatingField id="health-occupation" label="المهنة" value={healthForm.occupation} error={healthErrors.occupation} onChange={setHealthValue("occupation")} />
+                  </div>
+                </motion.section>
+
+                <motion.section className="panel" {...sectionAnimation}>
+                  <h2>تفاصيل التغطية الصحية</h2>
+                  <div className="grid three">
+                    <FloatingField id="health-planType" label="نوع الخطة" value={healthForm.planType} error={healthErrors.planType} required onChange={setHealthValue("planType")} />
+                    <FloatingField id="health-coverageScope" label="نطاق التغطية" value={healthForm.coverageScope} error={healthErrors.coverageScope} required onChange={setHealthValue("coverageScope")} />
+                    <FloatingField id="health-insuredMembersCount" label="عدد المؤمنين" value={healthForm.insuredMembersCount} error={healthErrors.insuredMembersCount} required inputMode="numeric" onChange={setHealthValue("insuredMembersCount")} />
+                    <FloatingField id="health-companyName" label="اسم الشركة" value={healthForm.companyName} error={healthErrors.companyName} onChange={setHealthValue("companyName")} />
+                    <FloatingField id="health-coverageStartDate" label="تاريخ بداية التغطية" value={healthForm.coverageStartDate} error={healthErrors.coverageStartDate} type="date" onChange={setHealthValue("coverageStartDate")} />
+                    <FloatingField id="health-coverageEndDate" label="تاريخ نهاية التغطية" value={healthForm.coverageEndDate} error={healthErrors.coverageEndDate} type="date" onChange={setHealthValue("coverageEndDate")} />
+                    <FloatingField id="health-estimatedAnnualPremium" label="القسط السنوي المتوقع" value={healthForm.estimatedAnnualPremium} error={healthErrors.estimatedAnnualPremium} inputMode="decimal" onChange={setHealthValue("estimatedAnnualPremium")} />
+                    <FloatingField id="health-currency" label="العملة" value={healthForm.currency} error={healthErrors.currency} required onChange={setHealthValue("currency")} />
+                    <FloatingField id="health-preferredHospitals" label="المستشفيات المفضلة" value={healthForm.preferredHospitals} error={healthErrors.preferredHospitals} onChange={setHealthValue("preferredHospitals")} />
+                  </div>
+                </motion.section>
+
+                <motion.section className="panel" {...sectionAnimation}>
+                  <h2>الحالة الصحية والتأمين السابق</h2>
+                  <div className="grid two">
+                    <label className="confirm compact-confirm">
+                      <input type="checkbox" checked={healthForm.hasChronicConditions} onChange={setHealthValue("hasChronicConditions")} />
+                      <span>يوجد أمراض أو حالات مزمنة</span>
+                    </label>
+                    <label className="confirm compact-confirm">
+                      <input type="checkbox" checked={healthForm.previousInsurance} onChange={setHealthValue("previousInsurance")} />
+                      <span>يوجد تأمين صحي سابق</span>
+                    </label>
+                    <FloatingField id="health-chronicConditions" label="تفاصيل الحالات المزمنة" value={healthForm.chronicConditions} error={healthErrors.chronicConditions} multiline rows={5} onChange={setHealthValue("chronicConditions")} />
+                    <FloatingField id="health-previousInsurer" label="شركة التأمين السابقة" value={healthForm.previousInsurer} error={healthErrors.previousInsurer} onChange={setHealthValue("previousInsurer")} />
+                    <FloatingField id="health-notes" label="ملاحظات" value={healthForm.notes} error={healthErrors.notes} multiline rows={5} onChange={setHealthValue("notes")} />
+                  </div>
+                </motion.section>
+
+                <motion.section className="panel review-panel" {...sectionAnimation}>
+                  <h2>مراجعة الطلب</h2>
+                  <div className="review-grid">
+                    <span>العميل</span>
+                    <strong>{healthForm.fullName || "-"}</strong>
+                    <span>الخطة</span>
+                    <strong>{healthForm.planType || "-"}</strong>
+                    <span>عدد المؤمنين</span>
+                    <strong>{healthForm.insuredMembersCount || "-"}</strong>
+                    <span>القسط المتوقع</span>
+                    <strong>{healthForm.estimatedAnnualPremium ? `${healthForm.estimatedAnnualPremium} ${healthForm.currency}` : "-"}</strong>
+                  </div>
+                  <label className={`confirm ${healthErrors.confirmed ? "field-error" : ""}`}>
+                    <input type="checkbox" checked={healthForm.confirmed} onChange={setHealthValue("confirmed")} />
+                    <span>أؤكد صحة المعلومات وأوافق على إرسال طلب التأمين الصحي إلى TRINSU.</span>
+                  </label>
+                  {healthErrors.confirmed ? <p className="error-text">{healthErrors.confirmed}</p> : null}
+                  {healthSubmitError ? <p className="submit-error" role="alert">{healthSubmitError}</p> : null}
+                  <button className="submit-button" type="submit" disabled={isHealthSubmitting}>
+                    {isHealthSubmitting ? <span className="spinner" aria-hidden="true" /> : <CheckCircle2 size={20} aria-hidden="true" />}
+                    {isHealthSubmitting ? "جاري الإرسال" : "إرسال طلب التأمين الصحي"}
+                  </button>
+                </motion.section>
+
+                {healthRequest ? (
+                  <motion.section className="success-panel" role="status" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+                    <CheckCircle2 size={42} aria-hidden="true" />
+                    <h2>تم إرسال طلب التأمين الصحي</h2>
+                    <p>تم تسجيل الطلب الصحي في نظام TRINSU بنجاح.</p>
+                    <div className="success-numbers">
+                      <div>
+                        <span>رقم الطلب</span>
+                        <strong>{healthRequest.requestNumber}</strong>
+                      </div>
+                      <div>
+                        <span>رقم التتبع</span>
+                        <strong>{healthRequest.trackingNumber}</strong>
+                      </div>
+                    </div>
+                    <div className="success-status">
+                      <span>الحالة</span>
+                      <strong>{healthRequest.status}</strong>
                     </div>
                   </motion.section>
                 ) : null}

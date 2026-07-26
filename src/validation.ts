@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { EngineeringFormState, FormState } from "./types";
+import type { EngineeringFormState, FormState, HealthFormState } from "./types";
 
 const requiredText = (message: string) => z.string().trim().min(1, message);
 
@@ -89,6 +89,63 @@ export const initialEngineeringForm: EngineeringFormState = {
   contractorName: "",
   ownerName: "",
   riskDetails: "",
+  notes: "",
+  confirmed: false,
+};
+
+export const createHealthSchema = (messages: {
+  fieldRequired: string;
+}) =>
+  z.object({
+    fullName: requiredText(messages.fieldRequired),
+    mobile: requiredText(messages.fieldRequired),
+    email: z.string(),
+    nationalId: requiredText(messages.fieldRequired),
+    address: z.string(),
+    city: requiredText(messages.fieldRequired),
+    age: requiredText(messages.fieldRequired),
+    gender: requiredText(messages.fieldRequired),
+    planType: requiredText(messages.fieldRequired),
+    coverageScope: requiredText(messages.fieldRequired),
+    insuredMembersCount: requiredText(messages.fieldRequired),
+    companyName: z.string(),
+    occupation: z.string(),
+    hasChronicConditions: z.boolean(),
+    chronicConditions: z.string(),
+    previousInsurance: z.boolean(),
+    previousInsurer: z.string(),
+    preferredHospitals: z.string(),
+    coverageStartDate: z.string(),
+    coverageEndDate: z.string(),
+    estimatedAnnualPremium: z.string(),
+    currency: requiredText(messages.fieldRequired),
+    notes: z.string(),
+    confirmed: z.boolean(),
+  });
+
+export const initialHealthForm: HealthFormState = {
+  fullName: "",
+  mobile: "",
+  email: "",
+  nationalId: "",
+  address: "",
+  city: "Baghdad",
+  age: "",
+  gender: "",
+  planType: "Individual Health",
+  coverageScope: "Iraq",
+  insuredMembersCount: "1",
+  companyName: "",
+  occupation: "",
+  hasChronicConditions: false,
+  chronicConditions: "",
+  previousInsurance: false,
+  previousInsurer: "",
+  preferredHospitals: "",
+  coverageStartDate: "",
+  coverageEndDate: "",
+  estimatedAnnualPremium: "",
+  currency: "IQD",
   notes: "",
   confirmed: false,
 };
