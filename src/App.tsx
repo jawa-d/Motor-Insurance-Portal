@@ -631,7 +631,14 @@ function App() {
       setFireTheftForm(initialFireTheftForm);
       window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
     } catch (error) {
-      setFireTheftSubmitError(getSubmitErrorMessage(error));
+      const message =
+        error instanceof Error
+          ? error.message
+          : getSubmitErrorMessage(error);
+      setFireTheftSubmitError(message || getSubmitErrorMessage(error));
+      window.setTimeout(() => {
+        document.getElementById("fire-theft-submit-error")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 0);
     } finally {
       setIsFireTheftSubmitting(false);
     }
@@ -1352,7 +1359,7 @@ function App() {
                     <span>أؤكد صحة المعلومات وأوافق على إرسال طلب تأمين الحريق والسرقة إلى TRINSU.</span>
                   </label>
                   {fireTheftErrors.confirmed ? <p className="error-text">{fireTheftErrors.confirmed}</p> : null}
-                  {fireTheftSubmitError ? <p className="submit-error" role="alert">{fireTheftSubmitError}</p> : null}
+                  {fireTheftSubmitError ? <p id="fire-theft-submit-error" className="submit-error" role="alert">{fireTheftSubmitError}</p> : null}
                   <button className="submit-button" type="submit" disabled={isFireTheftSubmitting}>
                     {isFireTheftSubmitting ? <span className="spinner" aria-hidden="true" /> : <CheckCircle2 size={20} aria-hidden="true" />}
                     {isFireTheftSubmitting ? "جاري الإرسال" : "إرسال طلب تأمين الحريق والسرقة"}

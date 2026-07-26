@@ -65,7 +65,11 @@ function cleanOptional(value: string) {
 }
 
 export async function submitFireTheftRequest(form: FireTheftFormState, agentCode?: string) {
+  const contentsValue = toOptionalNumber(form.contentsValue, "property.contentsValue");
+  const stockValue = toOptionalNumber(form.stockValue, "property.stockValue");
+
   const payload = {
+    submissionToken: typeof crypto.randomUUID === "function" ? crypto.randomUUID() : undefined,
     customer: {
       fullName: form.fullName.trim(),
       mobile: form.mobile.trim(),
@@ -79,12 +83,8 @@ export async function submitFireTheftRequest(form: FireTheftFormState, agentCode
       usage: form.propertyUsage.trim(),
       address: form.propertyAddress.trim(),
       buildingValue: toRequiredNumber(form.buildingValue, "property.buildingValue"),
-      ...(toOptionalNumber(form.contentsValue, "property.contentsValue") !== undefined
-        ? { contentsValue: toOptionalNumber(form.contentsValue, "property.contentsValue") }
-        : {}),
-      ...(toOptionalNumber(form.stockValue, "property.stockValue") !== undefined
-        ? { stockValue: toOptionalNumber(form.stockValue, "property.stockValue") }
-        : {}),
+      ...(contentsValue !== undefined ? { contentsValue } : {}),
+      ...(stockValue !== undefined ? { stockValue } : {}),
       totalSumInsured: toRequiredNumber(form.totalSumInsured, "property.totalSumInsured"),
       currency: form.currency.trim() || "IQD",
       coverageScope: form.coverageScope.trim(),
