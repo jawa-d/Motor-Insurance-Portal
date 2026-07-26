@@ -131,3 +131,29 @@ export type GeneralAccidentFormState = {
   notes: string;
   confirmed: boolean;
 };
+
+export type TravelFormState = {
+  fullName: string;
+  mobile: string;
+  email: string;
+  nationalId: string;
+  address: string;
+  city: string;
+  passportNumber: string;
+  dateOfBirth: string;
+  destinationCountry: string;
+  departureDate: string;
+  returnDate: string;
+  travelersCount: string;
+  tripPurpose: string;
+  coverageType: string;
+  coverageScope: string;
+  hasMedicalConditions: boolean;
+  medicalConditions: string;
+  emergencyContactName: string;
+  emergencyContactPhone: string;
+  estimatedPremium: string;
+  currency: string;
+  notes: string;
+  confirmed: boolean;
+};

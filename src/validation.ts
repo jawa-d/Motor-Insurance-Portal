@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { EngineeringFormState, FireTheftFormState, FormState, GeneralAccidentFormState, HealthFormState } from "./types";
+import type { EngineeringFormState, FireTheftFormState, FormState, GeneralAccidentFormState, HealthFormState, TravelFormState } from "./types";
 
 const requiredText = (message: string) => z.string().trim().min(1, message);
 
@@ -250,6 +250,61 @@ export const initialGeneralAccidentForm: GeneralAccidentFormState = {
   riskDetails: "",
   hasSafetyProgram: false,
   previousClaims: false,
+  notes: "",
+  confirmed: false,
+};
+
+export const createTravelSchema = (messages: {
+  fieldRequired: string;
+}) =>
+  z.object({
+    fullName: requiredText(messages.fieldRequired),
+    mobile: requiredText(messages.fieldRequired),
+    email: z.string(),
+    nationalId: requiredText(messages.fieldRequired),
+    address: z.string(),
+    city: requiredText(messages.fieldRequired),
+    passportNumber: requiredText(messages.fieldRequired),
+    dateOfBirth: requiredText(messages.fieldRequired),
+    destinationCountry: requiredText(messages.fieldRequired),
+    departureDate: requiredText(messages.fieldRequired),
+    returnDate: requiredText(messages.fieldRequired),
+    travelersCount: requiredText(messages.fieldRequired),
+    tripPurpose: requiredText(messages.fieldRequired),
+    coverageType: requiredText(messages.fieldRequired),
+    coverageScope: requiredText(messages.fieldRequired),
+    hasMedicalConditions: z.boolean(),
+    medicalConditions: z.string(),
+    emergencyContactName: z.string(),
+    emergencyContactPhone: z.string(),
+    estimatedPremium: z.string(),
+    currency: requiredText(messages.fieldRequired),
+    notes: z.string(),
+    confirmed: z.boolean(),
+  });
+
+export const initialTravelForm: TravelFormState = {
+  fullName: "",
+  mobile: "",
+  email: "",
+  nationalId: "",
+  address: "",
+  city: "Baghdad",
+  passportNumber: "",
+  dateOfBirth: "",
+  destinationCountry: "",
+  departureDate: "",
+  returnDate: "",
+  travelersCount: "1",
+  tripPurpose: "Tourism",
+  coverageType: "Single trip",
+  coverageScope: "Medical, travel delay, baggage loss",
+  hasMedicalConditions: false,
+  medicalConditions: "",
+  emergencyContactName: "",
+  emergencyContactPhone: "",
+  estimatedPremium: "",
+  currency: "IQD",
   notes: "",
   confirmed: false,
 };

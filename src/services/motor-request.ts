@@ -49,7 +49,7 @@ export type MotorRequestTracking = {
   customerName: string;
   vehicle?: string;
   subject?: string;
-  requestType?: "motor" | "engineering" | "health" | "fireTheft" | "generalAccident" | "unknown";
+  requestType?: "motor" | "engineering" | "health" | "fireTheft" | "generalAccident" | "travel" | "unknown";
   project?: {
     name?: string;
     type?: string;
@@ -75,6 +75,13 @@ export type MotorRequestTracking = {
     riskLocation?: string;
     coverageLimit?: number;
     currency?: string;
+  };
+  travel?: {
+    destinationCountry?: string;
+    departureDate?: string;
+    returnDate?: string;
+    coverageType?: string;
+    travelersCount?: number;
   };
 };
 
@@ -267,7 +274,7 @@ function normalizeTrackingResponse(response: MotorRequestTracking, requestType: 
   return {
     ...response,
     requestType,
-    subject: response.subject ?? response.vehicle ?? response.project?.name ?? response.health?.planType ?? response.property?.type ?? response.accident?.insuredName,
+    subject: response.subject ?? response.vehicle ?? response.project?.name ?? response.health?.planType ?? response.property?.type ?? response.accident?.insuredName ?? response.travel?.destinationCountry,
   };
 }
 
@@ -438,11 +445,35 @@ export async function trackMotorRequest(trackingNumber: string) {
       }
     }
 
-    const generalAccidentTracking = await getJson<MotorRequestTracking>(
-      `/api/v1/public/general-accident-requests/${encodedTrackingNumber}`,
+    try {
+      const generalAccidentTracking = await getJson<MotorRequestTracking>(
+        `/api/v1/public/general-accident-requests/${encodedTrackingNumber}`,
+      );
+
+      return normalizeTrackingResponse(generalAccidentTracking, "generalAccident");
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.status !== 404) {
+        throw error;
+      }
+    }
+
+    try {
+      const travelTracking = await getJson<MotorRequestTracking>(
+        `/api/v1/public/travel-requests/track/${encodedTrackingNumber}`,
+      );
+
+      return normalizeTrackingResponse(travelTracking, "travel");
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.status !== 404) {
+        throw error;
+      }
+    }
+
+    const travelTracking = await getJson<MotorRequestTracking>(
+      `/api/v1/public/travel-requests/${encodedTrackingNumber}`,
     );
 
-    return normalizeTrackingResponse(generalAccidentTracking, "generalAccident");
+    return normalizeTrackingResponse(travelTracking, "travel");
   }
 
   return getSameOriginJson<MotorRequestTracking>(`/api/motor-request-track?trackingNumber=${encodedTrackingNumber}`);

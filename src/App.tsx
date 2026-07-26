@@ -20,6 +20,7 @@ import {
   MessageCircle,
   Moon,
   Phone,
+  Plane,
   ShieldCheck,
   ShieldAlert,
   Sun,
@@ -36,6 +37,7 @@ import { submitEngineeringRequest } from "./services/engineering-request";
 import { submitFireTheftRequest } from "./services/fire-theft-request";
 import { submitGeneralAccidentRequest } from "./services/general-accident-request";
 import { submitHealthRequest } from "./services/health-request";
+import { submitTravelRequest } from "./services/travel-request";
 import {
   submitMotorRequest,
   trackMotorRequest,
@@ -43,18 +45,20 @@ import {
   type MotorRequestUploadProgress,
   type PublicMotorRequestStatus,
 } from "./services/motor-request";
-import type { DocumentKey, EngineeringFormState, Errors, FireTheftFormState, FormState, GeneralAccidentFormState, HealthFormState, UploadFile } from "./types";
+import type { DocumentKey, EngineeringFormState, Errors, FireTheftFormState, FormState, GeneralAccidentFormState, HealthFormState, TravelFormState, UploadFile } from "./types";
 import {
   createEngineeringSchema,
   createFireTheftSchema,
   createGeneralAccidentSchema,
   createHealthSchema,
   createSchema,
+  createTravelSchema,
   initialEngineeringForm,
   initialFireTheftForm,
   initialForm,
   initialGeneralAccidentForm,
   initialHealthForm,
+  initialTravelForm,
 } from "./validation";
 
 const documentKeys: DocumentKey[] = [
@@ -84,7 +88,7 @@ const supportWhatsApp = [
 const fallbackFormUrl =
   "https://docs.google.com/forms/d/e/1FAIpQLSc_xrj87VpZj0VRte-KCnaidxUUIVx1t5brl7NaBVJXRls_qA/viewform?usp=publish-editor";
 
-type Page = "home" | "motor" | "engineering" | "health" | "fire-theft" | "general-accident" | "track" | "support";
+type Page = "home" | "motor" | "engineering" | "health" | "fire-theft" | "general-accident" | "travel" | "track" | "support";
 
 const getCurrentPage = (): Page => {
   const path = window.location.pathname.replace(/\/+$/, "");
@@ -96,6 +100,7 @@ const getCurrentPage = (): Page => {
   if (path === "/health") return "health";
   if (path === "/fire-theft") return "fire-theft";
   if (path === "/general-accident") return "general-accident";
+  if (path === "/travel") return "travel";
 
   return "home";
 };
@@ -154,6 +159,7 @@ function App() {
   const [healthForm, setHealthForm] = useState<HealthFormState>(initialHealthForm);
   const [fireTheftForm, setFireTheftForm] = useState<FireTheftFormState>(initialFireTheftForm);
   const [generalAccidentForm, setGeneralAccidentForm] = useState<GeneralAccidentFormState>(initialGeneralAccidentForm);
+  const [travelForm, setTravelForm] = useState<TravelFormState>(initialTravelForm);
   const [vehicleImages, setVehicleImages] = useState<UploadFile[]>([]);
   const [documents, setDocuments] = useState<Partial<Record<DocumentKey, UploadFile>>>({});
   const [errors, setErrors] = useState<Errors>({});
@@ -182,6 +188,10 @@ function App() {
   const [generalAccidentSubmitError, setGeneralAccidentSubmitError] = useState<string | null>(null);
   const [generalAccidentRequest, setGeneralAccidentRequest] = useState<{ requestNumber: string; trackingNumber: string; status: string } | null>(null);
   const [isGeneralAccidentSubmitting, setIsGeneralAccidentSubmitting] = useState(false);
+  const [travelErrors, setTravelErrors] = useState<Errors>({});
+  const [travelSubmitError, setTravelSubmitError] = useState<string | null>(null);
+  const [travelRequest, setTravelRequest] = useState<{ requestNumber: string; trackingNumber: string; status: string } | null>(null);
+  const [isTravelSubmitting, setIsTravelSubmitting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<MotorRequestUploadProgress | null>(null);
 
@@ -194,6 +204,7 @@ function App() {
   const showHealthPage = page === "health";
   const showFireTheftPage = page === "fire-theft";
   const showGeneralAccidentPage = page === "general-accident";
+  const showTravelPage = page === "travel";
   const showTrackingPage = page === "track";
   const showSupportPage = page === "support";
 
@@ -271,6 +282,13 @@ function App() {
       }),
     [t],
   );
+  const travelSchema = useMemo(
+    () =>
+      createTravelSchema({
+        fieldRequired: t.fieldRequired,
+      }),
+    [t],
+  );
 
   useEffect(() => {
     const updatePage = () => setPage(getCurrentPage());
@@ -320,6 +338,12 @@ function App() {
     const value = event.target.type === "checkbox" ? (event.target as HTMLInputElement).checked : event.target.value;
     setGeneralAccidentForm((current) => ({ ...current, [key]: value }));
     setGeneralAccidentErrors((current) => ({ ...current, [key]: undefined }));
+  };
+
+  const setTravelValue = (key: keyof TravelFormState) => (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const value = event.target.type === "checkbox" ? (event.target as HTMLInputElement).checked : event.target.value;
+    setTravelForm((current) => ({ ...current, [key]: value }));
+    setTravelErrors((current) => ({ ...current, [key]: undefined }));
   };
 
   const getTrackingErrorMessage = (error: unknown) => {
@@ -711,6 +735,53 @@ function App() {
     }
   };
 
+  const submitTravel = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (isTravelSubmitting) return;
+
+    const parsed = travelSchema.safeParse(travelForm);
+    const nextErrors: Errors = {};
+    setTravelSubmitError(null);
+    setTravelRequest(null);
+
+    if (!parsed.success) {
+      for (const issue of parsed.error.issues) {
+        nextErrors[String(issue.path[0])] = issue.message;
+      }
+    }
+
+    if (!travelForm.confirmed) {
+      nextErrors.confirmed = t.fieldRequired;
+    }
+
+    if (travelForm.hasMedicalConditions && !travelForm.medicalConditions.trim()) {
+      nextErrors.medicalConditions = t.fieldRequired;
+    }
+
+    setTravelErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length > 0) return;
+
+    try {
+      setIsTravelSubmitting(true);
+      const result = await submitTravelRequest(travelForm, agentCode);
+      setTravelRequest(result);
+      setTravelForm(initialTravelForm);
+      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : getSubmitErrorMessage(error);
+      setTravelSubmitError(message || getSubmitErrorMessage(error));
+      window.setTimeout(() => {
+        document.getElementById("travel-submit-error")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 0);
+    } finally {
+      setIsTravelSubmitting(false);
+    }
+  };
+
   const trackingActiveIndex = trackingLookup ? trackingStatusIndex[trackingLookup.status] : 0;
   const trackingUpdatedAt = trackingLookup
     ? new Intl.DateTimeFormat(language === "ar" ? "ar-IQ" : "en", {
@@ -743,8 +814,12 @@ function App() {
         ? language === "ar"
           ? "المؤمن له"
           : "Insured"
+      : trackingLookup?.requestType === "travel"
+        ? language === "ar"
+          ? "الوجهة"
+          : "Destination"
       : t.vehicle;
-  const trackingSubjectValue = trackingLookup?.subject ?? trackingLookup?.vehicle ?? trackingLookup?.health?.planType ?? trackingLookup?.property?.type ?? trackingLookup?.accident?.insuredName ?? "-";
+  const trackingSubjectValue = trackingLookup?.subject ?? trackingLookup?.vehicle ?? trackingLookup?.health?.planType ?? trackingLookup?.property?.type ?? trackingLookup?.accident?.insuredName ?? trackingLookup?.travel?.destinationCountry ?? "-";
 
   return (
     <div className={`${darkMode ? "app dark" : "app"} ${isFormLocked ? "app-busy" : ""}`} dir={direction} lang={language}>
@@ -803,6 +878,10 @@ function App() {
           <a className="icon-button" href="/general-accident" onClick={navigate("general-accident")}>
             <ShieldAlert size={18} aria-hidden="true" />
             حوادث عامة
+          </a>
+          <a className="icon-button" href="/travel" onClick={navigate("travel")}>
+            <Plane size={18} aria-hidden="true" />
+            سفر
           </a>
           <a className="icon-button" href="/support" onClick={navigate("support")}>
             <Phone size={18} aria-hidden="true" />
@@ -872,6 +951,10 @@ function App() {
               <ShieldAlert size={20} aria-hidden="true" />
               طلب تأمين حوادث عامة
             </a>
+            <a className="ghost-link" href="/travel" onClick={navigate("travel")}>
+              <Plane size={20} aria-hidden="true" />
+              طلب تأمين سفر
+            </a>
             <a className="ghost-link" href="/track" onClick={navigate("track")}>
               <MapPinned size={20} aria-hidden="true" />
               {t.trackRequest}
@@ -935,6 +1018,12 @@ function App() {
             <h2>تأمين الحوادث العامة</h2>
             <p>سجّل نشاط العمل وموقع الخطر وحدود التغطية لإرسال طلب حوادث عامة ومسؤولية طرف ثالث.</p>
             <a href="/general-accident" onClick={navigate("general-accident")}>فتح الفورمة</a>
+          </article>
+          <article>
+            <span><Plane size={22} aria-hidden="true" /></span>
+            <h2>تأمين السفر</h2>
+            <p>سجّل بيانات المسافر والوجهة وتواريخ الرحلة ونوع التغطية لإرسال طلب تأمين سفر.</p>
+            <a href="/travel" onClick={navigate("travel")}>فتح الفورمة</a>
           </article>
           <article>
             <span><MapPinned size={22} aria-hidden="true" /></span>
@@ -1116,6 +1205,18 @@ function App() {
                     <div>
                       <dt>{language === "ar" ? "حد التغطية" : "Coverage limit"}</dt>
                       <dd>{`${trackingLookup.accident.coverageLimit} ${trackingLookup.accident.currency ?? ""}`.trim()}</dd>
+                    </div>
+                  ) : null}
+                  {trackingLookup.requestType === "travel" && trackingLookup.travel?.coverageType ? (
+                    <div>
+                      <dt>{language === "ar" ? "نوع التغطية" : "Coverage type"}</dt>
+                      <dd>{trackingLookup.travel.coverageType}</dd>
+                    </div>
+                  ) : null}
+                  {trackingLookup.requestType === "travel" && trackingLookup.travel?.travelersCount ? (
+                    <div>
+                      <dt>{language === "ar" ? "عدد المسافرين" : "Travelers"}</dt>
+                      <dd>{trackingLookup.travel.travelersCount}</dd>
                     </div>
                   ) : null}
                   <div>
@@ -1611,6 +1712,119 @@ function App() {
                     <div className="success-status">
                       <span>الحالة</span>
                       <strong>{generalAccidentRequest.status}</strong>
+                    </div>
+                  </motion.section>
+                ) : null}
+              </fieldset>
+            </form>
+          </>
+        ) : null}
+
+        {showTravelPage ? (
+          <>
+            <motion.section className="engineering-hero travel-hero" {...sectionAnimation}>
+              <div>
+                <span className="eyebrow">
+                  <Plane size={18} aria-hidden="true" />
+                  تأمين السفر
+                </span>
+                <h1>طلب تأمين سفر</h1>
+                <p>أدخل بيانات المسافر والوجهة وتواريخ الرحلة ونطاق التغطية ليتم تسجيل الطلب ومتابعته داخل النظام.</p>
+              </div>
+              <div className="engineering-metrics travel-metrics" aria-hidden="true">
+                <span>TRV</span>
+                <strong>Travel Insurance</strong>
+                <small>Trip coverage request</small>
+              </div>
+            </motion.section>
+
+            <form id="travel-request-form" className="request-form" onSubmit={submitTravel} noValidate>
+              <fieldset className="form-fieldset" disabled={isTravelSubmitting}>
+                <motion.section className="panel" {...sectionAnimation}>
+                  <h2>معلومات المسافر</h2>
+                  <div className="grid three">
+                    <FloatingField id="travel-fullName" label="الاسم الكامل" value={travelForm.fullName} error={travelErrors.fullName} required onChange={setTravelValue("fullName")} />
+                    <FloatingField id="travel-mobile" label="رقم الموبايل" value={travelForm.mobile} error={travelErrors.mobile} required inputMode="tel" onChange={setTravelValue("mobile")} />
+                    <FloatingField id="travel-email" label="البريد الإلكتروني" value={travelForm.email} error={travelErrors.email} type="email" onChange={setTravelValue("email")} />
+                    <FloatingField id="travel-nationalId" label="الرقم الوطني" value={travelForm.nationalId} error={travelErrors.nationalId} required onChange={setTravelValue("nationalId")} />
+                    <FloatingField id="travel-passportNumber" label="رقم الجواز" value={travelForm.passportNumber} error={travelErrors.passportNumber} required onChange={setTravelValue("passportNumber")} />
+                    <FloatingField id="travel-dateOfBirth" label="تاريخ الميلاد" value={travelForm.dateOfBirth} error={travelErrors.dateOfBirth} required type="date" onChange={setTravelValue("dateOfBirth")} />
+                    <FloatingField id="travel-city" label="المدينة" value={travelForm.city} error={travelErrors.city} required onChange={setTravelValue("city")} />
+                    <FloatingField id="travel-address" label="العنوان" value={travelForm.address} error={travelErrors.address} onChange={setTravelValue("address")} />
+                  </div>
+                </motion.section>
+
+                <motion.section className="panel" {...sectionAnimation}>
+                  <h2>تفاصيل الرحلة</h2>
+                  <div className="grid three">
+                    <FloatingField id="travel-destinationCountry" label="بلد الوجهة" value={travelForm.destinationCountry} error={travelErrors.destinationCountry} required onChange={setTravelValue("destinationCountry")} />
+                    <FloatingField id="travel-departureDate" label="تاريخ المغادرة" value={travelForm.departureDate} error={travelErrors.departureDate} required type="date" onChange={setTravelValue("departureDate")} />
+                    <FloatingField id="travel-returnDate" label="تاريخ العودة" value={travelForm.returnDate} error={travelErrors.returnDate} required type="date" onChange={setTravelValue("returnDate")} />
+                    <FloatingField id="travel-travelersCount" label="عدد المسافرين" value={travelForm.travelersCount} error={travelErrors.travelersCount} required inputMode="numeric" onChange={setTravelValue("travelersCount")} />
+                    <FloatingField id="travel-tripPurpose" label="غرض السفر" value={travelForm.tripPurpose} error={travelErrors.tripPurpose} required onChange={setTravelValue("tripPurpose")} />
+                    <FloatingField id="travel-coverageType" label="نوع التغطية" value={travelForm.coverageType} error={travelErrors.coverageType} required onChange={setTravelValue("coverageType")} />
+                    <FloatingField id="travel-coverageScope" label="نطاق التغطية" value={travelForm.coverageScope} error={travelErrors.coverageScope} required onChange={setTravelValue("coverageScope")} />
+                    <FloatingField id="travel-estimatedPremium" label="القسط المتوقع" value={travelForm.estimatedPremium} error={travelErrors.estimatedPremium} inputMode="decimal" onChange={setTravelValue("estimatedPremium")} />
+                    <FloatingField id="travel-currency" label="العملة" value={travelForm.currency} error={travelErrors.currency} required onChange={setTravelValue("currency")} />
+                  </div>
+                </motion.section>
+
+                <motion.section className="panel" {...sectionAnimation}>
+                  <h2>الصحة والطوارئ</h2>
+                  <div className="grid two">
+                    <label className="confirm compact-confirm">
+                      <input type="checkbox" checked={travelForm.hasMedicalConditions} onChange={setTravelValue("hasMedicalConditions")} />
+                      <span>توجد حالات طبية أو أمراض مزمنة</span>
+                    </label>
+                    <FloatingField id="travel-emergencyContactName" label="اسم جهة الطوارئ" value={travelForm.emergencyContactName} error={travelErrors.emergencyContactName} onChange={setTravelValue("emergencyContactName")} />
+                    <FloatingField id="travel-emergencyContactPhone" label="هاتف جهة الطوارئ" value={travelForm.emergencyContactPhone} error={travelErrors.emergencyContactPhone} inputMode="tel" onChange={setTravelValue("emergencyContactPhone")} />
+                    <FloatingField id="travel-medicalConditions" label="تفاصيل الحالات الطبية" value={travelForm.medicalConditions} error={travelErrors.medicalConditions} multiline rows={5} onChange={setTravelValue("medicalConditions")} />
+                    <FloatingField id="travel-notes" label="ملاحظات" value={travelForm.notes} error={travelErrors.notes} multiline rows={5} onChange={setTravelValue("notes")} />
+                  </div>
+                </motion.section>
+
+                <motion.section className="panel review-panel" {...sectionAnimation}>
+                  <h2>مراجعة الطلب</h2>
+                  <div className="review-grid">
+                    <span>المسافر</span>
+                    <strong>{travelForm.fullName || "-"}</strong>
+                    <span>الوجهة</span>
+                    <strong>{travelForm.destinationCountry || "-"}</strong>
+                    <span>مدة الرحلة</span>
+                    <strong>{[travelForm.departureDate, travelForm.returnDate].filter(Boolean).join(" - ") || "-"}</strong>
+                    <span>نوع التغطية</span>
+                    <strong>{travelForm.coverageType || "-"}</strong>
+                  </div>
+                  <label className={`confirm ${travelErrors.confirmed ? "field-error" : ""}`}>
+                    <input type="checkbox" checked={travelForm.confirmed} onChange={setTravelValue("confirmed")} />
+                    <span>أؤكد صحة المعلومات وأوافق على إرسال طلب تأمين السفر إلى TRINSU.</span>
+                  </label>
+                  {travelErrors.confirmed ? <p className="error-text">{travelErrors.confirmed}</p> : null}
+                  {travelSubmitError ? <p id="travel-submit-error" className="submit-error" role="alert">{travelSubmitError}</p> : null}
+                  <button className="submit-button" type="submit" disabled={isTravelSubmitting}>
+                    {isTravelSubmitting ? <span className="spinner" aria-hidden="true" /> : <CheckCircle2 size={20} aria-hidden="true" />}
+                    {isTravelSubmitting ? "جاري الإرسال" : "إرسال طلب تأمين السفر"}
+                  </button>
+                </motion.section>
+
+                {travelRequest ? (
+                  <motion.section className="success-panel" role="status" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+                    <CheckCircle2 size={42} aria-hidden="true" />
+                    <h2>تم إرسال طلب تأمين السفر</h2>
+                    <p>تم تسجيل الطلب في نظام TRINSU بنجاح.</p>
+                    <div className="success-numbers">
+                      <div>
+                        <span>رقم الطلب</span>
+                        <strong>{travelRequest.requestNumber}</strong>
+                      </div>
+                      <div>
+                        <span>رقم التتبع</span>
+                        <strong>{travelRequest.trackingNumber}</strong>
+                      </div>
+                    </div>
+                    <div className="success-status">
+                      <span>الحالة</span>
+                      <strong>{travelRequest.status}</strong>
                     </div>
                   </motion.section>
                 ) : null}
