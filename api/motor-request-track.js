@@ -15,7 +15,7 @@ function normalizeTrackingPayload(payload, requestType) {
   return {
     ...payload,
     requestType,
-    subject: payload.subject ?? payload.vehicle ?? payload.projectName ?? payload.project?.name ?? payload.health?.planType,
+    subject: payload.subject ?? payload.vehicle ?? payload.projectName ?? payload.project?.name ?? payload.health?.planType ?? payload.property?.type,
   };
 }
 
@@ -67,6 +67,14 @@ export default async function handler(request, response) {
     {
       type: "health",
       url: `${baseUrl}/api/v1/public/health-requests/${encodedTrackingNumber}`,
+    },
+    {
+      type: "fireTheft",
+      url: `${baseUrl}/api/v1/public/fire-theft-requests/track/${encodedTrackingNumber}`,
+    },
+    {
+      type: "fireTheft",
+      url: `${baseUrl}/api/v1/public/fire-theft-requests/${encodedTrackingNumber}`,
     },
   ];
 

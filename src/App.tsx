@@ -10,6 +10,7 @@ import {
   Download,
   ExternalLink,
   FileSearch,
+  Flame,
   Globe2,
   HeartPulse,
   Info,
@@ -31,6 +32,7 @@ import { UploadZone } from "./components/UploadZone";
 import { translations, type Language } from "./i18n";
 import { ApiError } from "./services/api";
 import { submitEngineeringRequest } from "./services/engineering-request";
+import { submitFireTheftRequest } from "./services/fire-theft-request";
 import { submitHealthRequest } from "./services/health-request";
 import {
   submitMotorRequest,
@@ -39,8 +41,17 @@ import {
   type MotorRequestUploadProgress,
   type PublicMotorRequestStatus,
 } from "./services/motor-request";
-import type { DocumentKey, EngineeringFormState, Errors, FormState, HealthFormState, UploadFile } from "./types";
-import { createEngineeringSchema, createHealthSchema, createSchema, initialEngineeringForm, initialForm, initialHealthForm } from "./validation";
+import type { DocumentKey, EngineeringFormState, Errors, FireTheftFormState, FormState, HealthFormState, UploadFile } from "./types";
+import {
+  createEngineeringSchema,
+  createFireTheftSchema,
+  createHealthSchema,
+  createSchema,
+  initialEngineeringForm,
+  initialFireTheftForm,
+  initialForm,
+  initialHealthForm,
+} from "./validation";
 
 const documentKeys: DocumentKey[] = [
   "frontNationalId",
@@ -69,7 +80,7 @@ const supportWhatsApp = [
 const fallbackFormUrl =
   "https://docs.google.com/forms/d/e/1FAIpQLSc_xrj87VpZj0VRte-KCnaidxUUIVx1t5brl7NaBVJXRls_qA/viewform?usp=publish-editor";
 
-type Page = "home" | "motor" | "engineering" | "health" | "track" | "support";
+type Page = "home" | "motor" | "engineering" | "health" | "fire-theft" | "track" | "support";
 
 const getCurrentPage = (): Page => {
   const path = window.location.pathname.replace(/\/+$/, "");
@@ -79,6 +90,7 @@ const getCurrentPage = (): Page => {
   if (path === "/motor") return "motor";
   if (path === "/engineering") return "engineering";
   if (path === "/health") return "health";
+  if (path === "/fire-theft") return "fire-theft";
 
   return "home";
 };
@@ -135,6 +147,7 @@ function App() {
   const [form, setForm] = useState<FormState>(initialForm);
   const [engineeringForm, setEngineeringForm] = useState<EngineeringFormState>(initialEngineeringForm);
   const [healthForm, setHealthForm] = useState<HealthFormState>(initialHealthForm);
+  const [fireTheftForm, setFireTheftForm] = useState<FireTheftFormState>(initialFireTheftForm);
   const [vehicleImages, setVehicleImages] = useState<UploadFile[]>([]);
   const [documents, setDocuments] = useState<Partial<Record<DocumentKey, UploadFile>>>({});
   const [errors, setErrors] = useState<Errors>({});
@@ -155,6 +168,10 @@ function App() {
   const [healthSubmitError, setHealthSubmitError] = useState<string | null>(null);
   const [healthRequest, setHealthRequest] = useState<{ requestNumber: string; trackingNumber: string; status: string } | null>(null);
   const [isHealthSubmitting, setIsHealthSubmitting] = useState(false);
+  const [fireTheftErrors, setFireTheftErrors] = useState<Errors>({});
+  const [fireTheftSubmitError, setFireTheftSubmitError] = useState<string | null>(null);
+  const [fireTheftRequest, setFireTheftRequest] = useState<{ requestNumber: string; trackingNumber: string; status: string } | null>(null);
+  const [isFireTheftSubmitting, setIsFireTheftSubmitting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<MotorRequestUploadProgress | null>(null);
 
@@ -165,6 +182,7 @@ function App() {
   const showMotorPage = page === "motor";
   const showEngineeringPage = page === "engineering";
   const showHealthPage = page === "health";
+  const showFireTheftPage = page === "fire-theft";
   const showTrackingPage = page === "track";
   const showSupportPage = page === "support";
 
@@ -228,6 +246,13 @@ function App() {
       }),
     [t],
   );
+  const fireTheftSchema = useMemo(
+    () =>
+      createFireTheftSchema({
+        fieldRequired: t.fieldRequired,
+      }),
+    [t],
+  );
 
   useEffect(() => {
     const updatePage = () => setPage(getCurrentPage());
@@ -265,6 +290,12 @@ function App() {
     const value = event.target.type === "checkbox" ? (event.target as HTMLInputElement).checked : event.target.value;
     setHealthForm((current) => ({ ...current, [key]: value }));
     setHealthErrors((current) => ({ ...current, [key]: undefined }));
+  };
+
+  const setFireTheftValue = (key: keyof FireTheftFormState) => (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const value = event.target.type === "checkbox" ? (event.target as HTMLInputElement).checked : event.target.value;
+    setFireTheftForm((current) => ({ ...current, [key]: value }));
+    setFireTheftErrors((current) => ({ ...current, [key]: undefined }));
   };
 
   const getTrackingErrorMessage = (error: unknown) => {
@@ -570,6 +601,42 @@ function App() {
     }
   };
 
+  const submitFireTheft = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (isFireTheftSubmitting) return;
+
+    const parsed = fireTheftSchema.safeParse(fireTheftForm);
+    const nextErrors: Errors = {};
+    setFireTheftSubmitError(null);
+    setFireTheftRequest(null);
+
+    if (!parsed.success) {
+      for (const issue of parsed.error.issues) {
+        nextErrors[String(issue.path[0])] = issue.message;
+      }
+    }
+
+    if (!fireTheftForm.confirmed) {
+      nextErrors.confirmed = t.fieldRequired;
+    }
+
+    setFireTheftErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length > 0) return;
+
+    try {
+      setIsFireTheftSubmitting(true);
+      const result = await submitFireTheftRequest(fireTheftForm, agentCode);
+      setFireTheftRequest(result);
+      setFireTheftForm(initialFireTheftForm);
+      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+    } catch (error) {
+      setFireTheftSubmitError(getSubmitErrorMessage(error));
+    } finally {
+      setIsFireTheftSubmitting(false);
+    }
+  };
+
   const trackingActiveIndex = trackingLookup ? trackingStatusIndex[trackingLookup.status] : 0;
   const trackingUpdatedAt = trackingLookup
     ? new Intl.DateTimeFormat(language === "ar" ? "ar-IQ" : "en", {
@@ -594,8 +661,12 @@ function App() {
         ? language === "ar"
           ? "الخطة الصحية"
           : "Health plan"
+      : trackingLookup?.requestType === "fireTheft"
+        ? language === "ar"
+          ? "العقار"
+          : "Property"
       : t.vehicle;
-  const trackingSubjectValue = trackingLookup?.subject ?? trackingLookup?.vehicle ?? trackingLookup?.health?.planType ?? "-";
+  const trackingSubjectValue = trackingLookup?.subject ?? trackingLookup?.vehicle ?? trackingLookup?.health?.planType ?? trackingLookup?.property?.type ?? "-";
 
   return (
     <div className={`${darkMode ? "app dark" : "app"} ${isFormLocked ? "app-busy" : ""}`} dir={direction} lang={language}>
@@ -646,6 +717,10 @@ function App() {
           <a className="icon-button" href="/health" onClick={navigate("health")}>
             <HeartPulse size={18} aria-hidden="true" />
             تأمين صحي
+          </a>
+          <a className="icon-button" href="/fire-theft" onClick={navigate("fire-theft")}>
+            <Flame size={18} aria-hidden="true" />
+            حريق وسرقة
           </a>
           <a className="icon-button" href="/support" onClick={navigate("support")}>
             <Phone size={18} aria-hidden="true" />
@@ -707,6 +782,10 @@ function App() {
               <HeartPulse size={20} aria-hidden="true" />
               طلب تأمين صحي
             </a>
+            <a className="ghost-link" href="/fire-theft" onClick={navigate("fire-theft")}>
+              <Flame size={20} aria-hidden="true" />
+              طلب تأمين حريق وسرقة
+            </a>
             <a className="ghost-link" href="/track" onClick={navigate("track")}>
               <MapPinned size={20} aria-hidden="true" />
               {t.trackRequest}
@@ -758,6 +837,12 @@ function App() {
             <h2>التأمين الصحي</h2>
             <p>قدّم بيانات العميل وخطة التغطية وعدد المؤمنين والحالة الصحية لإرسال طلب صحي جديد إلى النظام.</p>
             <a href="/health" onClick={navigate("health")}>فتح الفورمة</a>
+          </article>
+          <article>
+            <span><Flame size={22} aria-hidden="true" /></span>
+            <h2>تأمين الحريق والسرقة</h2>
+            <p>سجّل بيانات العقار وقيمة المبنى والمحتويات وأنظمة السلامة لإرسال طلب تأمين جديد.</p>
+            <a href="/fire-theft" onClick={navigate("fire-theft")}>فتح الفورمة</a>
           </article>
           <article>
             <span><MapPinned size={22} aria-hidden="true" /></span>
@@ -909,6 +994,18 @@ function App() {
                     <div>
                       <dt>{language === "ar" ? "عدد المؤمنين" : "Insured members"}</dt>
                       <dd>{trackingLookup.health.insuredMembersCount}</dd>
+                    </div>
+                  ) : null}
+                  {trackingLookup.requestType === "fireTheft" && trackingLookup.property?.address ? (
+                    <div>
+                      <dt>{language === "ar" ? "عنوان العقار" : "Property address"}</dt>
+                      <dd>{trackingLookup.property.address}</dd>
+                    </div>
+                  ) : null}
+                  {trackingLookup.requestType === "fireTheft" && trackingLookup.property?.totalSumInsured ? (
+                    <div>
+                      <dt>{language === "ar" ? "مبلغ التأمين" : "Sum insured"}</dt>
+                      <dd>{`${trackingLookup.property.totalSumInsured} ${trackingLookup.property.currency ?? ""}`.trim()}</dd>
                     </div>
                   ) : null}
                   <div>
@@ -1158,6 +1255,128 @@ function App() {
                     <div className="success-status">
                       <span>الحالة</span>
                       <strong>{healthRequest.status}</strong>
+                    </div>
+                  </motion.section>
+                ) : null}
+              </fieldset>
+            </form>
+          </>
+        ) : null}
+
+        {showFireTheftPage ? (
+          <>
+            <motion.section className="engineering-hero fire-theft-hero" {...sectionAnimation}>
+              <div>
+                <span className="eyebrow">
+                  <Flame size={18} aria-hidden="true" />
+                  تأمين الحريق والسرقة
+                </span>
+                <h1>طلب تأمين حريق وسرقة</h1>
+                <p>أدخل بيانات العميل والعقار ومبالغ التأمين وأنظمة الحماية ليتم تسجيل الطلب ومتابعته داخل النظام.</p>
+              </div>
+              <div className="engineering-metrics fire-theft-metrics" aria-hidden="true">
+                <span>FTH</span>
+                <strong>Fire & Theft</strong>
+                <small>Property request</small>
+              </div>
+            </motion.section>
+
+            <form id="fire-theft-request-form" className="request-form" onSubmit={submitFireTheft} noValidate>
+              <fieldset className="form-fieldset" disabled={isFireTheftSubmitting}>
+                <motion.section className="panel" {...sectionAnimation}>
+                  <h2>معلومات العميل</h2>
+                  <div className="grid three">
+                    <FloatingField id="fire-fullName" label="الاسم الكامل" value={fireTheftForm.fullName} error={fireTheftErrors.fullName} required onChange={setFireTheftValue("fullName")} />
+                    <FloatingField id="fire-mobile" label="رقم الموبايل" value={fireTheftForm.mobile} error={fireTheftErrors.mobile} required inputMode="tel" onChange={setFireTheftValue("mobile")} />
+                    <FloatingField id="fire-email" label="البريد الإلكتروني" value={fireTheftForm.email} error={fireTheftErrors.email} type="email" onChange={setFireTheftValue("email")} />
+                    <FloatingField id="fire-nationalId" label="الرقم الوطني" value={fireTheftForm.nationalId} error={fireTheftErrors.nationalId} required onChange={setFireTheftValue("nationalId")} />
+                    <FloatingField id="fire-city" label="المدينة" value={fireTheftForm.city} error={fireTheftErrors.city} required onChange={setFireTheftValue("city")} />
+                    <FloatingField id="fire-address" label="عنوان العميل" value={fireTheftForm.address} error={fireTheftErrors.address} onChange={setFireTheftValue("address")} />
+                  </div>
+                </motion.section>
+
+                <motion.section className="panel" {...sectionAnimation}>
+                  <h2>معلومات العقار</h2>
+                  <div className="grid three">
+                    <FloatingField id="fire-propertyType" label="نوع العقار" value={fireTheftForm.propertyType} error={fireTheftErrors.propertyType} required onChange={setFireTheftValue("propertyType")} />
+                    <FloatingField id="fire-propertyUsage" label="استخدام العقار" value={fireTheftForm.propertyUsage} error={fireTheftErrors.propertyUsage} required onChange={setFireTheftValue("propertyUsage")} />
+                    <FloatingField id="fire-propertyAddress" label="عنوان العقار" value={fireTheftForm.propertyAddress} error={fireTheftErrors.propertyAddress} required onChange={setFireTheftValue("propertyAddress")} />
+                    <FloatingField id="fire-coverageScope" label="نطاق التغطية" value={fireTheftForm.coverageScope} error={fireTheftErrors.coverageScope} required onChange={setFireTheftValue("coverageScope")} />
+                  </div>
+                </motion.section>
+
+                <motion.section className="panel" {...sectionAnimation}>
+                  <h2>مبالغ التأمين وأنظمة السلامة</h2>
+                  <div className="grid three">
+                    <FloatingField id="fire-buildingValue" label="قيمة المبنى" value={fireTheftForm.buildingValue} error={fireTheftErrors.buildingValue} required inputMode="decimal" onChange={setFireTheftValue("buildingValue")} />
+                    <FloatingField id="fire-contentsValue" label="قيمة المحتويات" value={fireTheftForm.contentsValue} error={fireTheftErrors.contentsValue} inputMode="decimal" onChange={setFireTheftValue("contentsValue")} />
+                    <FloatingField id="fire-stockValue" label="قيمة المخزون" value={fireTheftForm.stockValue} error={fireTheftErrors.stockValue} inputMode="decimal" onChange={setFireTheftValue("stockValue")} />
+                    <FloatingField id="fire-totalSumInsured" label="إجمالي مبلغ التأمين" value={fireTheftForm.totalSumInsured} error={fireTheftErrors.totalSumInsured} required inputMode="decimal" onChange={setFireTheftValue("totalSumInsured")} />
+                    <FloatingField id="fire-currency" label="العملة" value={fireTheftForm.currency} error={fireTheftErrors.currency} required onChange={setFireTheftValue("currency")} />
+                  </div>
+                  <div className="grid three">
+                    <label className="confirm compact-confirm">
+                      <input type="checkbox" checked={fireTheftForm.hasFireAlarm} onChange={setFireTheftValue("hasFireAlarm")} />
+                      <span>يوجد نظام إنذار حريق</span>
+                    </label>
+                    <label className="confirm compact-confirm">
+                      <input type="checkbox" checked={fireTheftForm.hasFireExtinguishers} onChange={setFireTheftValue("hasFireExtinguishers")} />
+                      <span>تتوفر مطافئ حريق</span>
+                    </label>
+                    <label className="confirm compact-confirm">
+                      <input type="checkbox" checked={fireTheftForm.hasSecuritySystem} onChange={setFireTheftValue("hasSecuritySystem")} />
+                      <span>يوجد نظام حماية أو مراقبة</span>
+                    </label>
+                  </div>
+                </motion.section>
+
+                <motion.section className="panel" {...sectionAnimation}>
+                  <h2>ملاحظات</h2>
+                  <FloatingField id="fire-notes" label="ملاحظات إضافية" value={fireTheftForm.notes} error={fireTheftErrors.notes} multiline rows={6} onChange={setFireTheftValue("notes")} />
+                </motion.section>
+
+                <motion.section className="panel review-panel" {...sectionAnimation}>
+                  <h2>مراجعة الطلب</h2>
+                  <div className="review-grid">
+                    <span>العميل</span>
+                    <strong>{fireTheftForm.fullName || "-"}</strong>
+                    <span>العقار</span>
+                    <strong>{fireTheftForm.propertyType || "-"}</strong>
+                    <span>عنوان العقار</span>
+                    <strong>{fireTheftForm.propertyAddress || "-"}</strong>
+                    <span>إجمالي مبلغ التأمين</span>
+                    <strong>{fireTheftForm.totalSumInsured ? `${fireTheftForm.totalSumInsured} ${fireTheftForm.currency}` : "-"}</strong>
+                  </div>
+                  <label className={`confirm ${fireTheftErrors.confirmed ? "field-error" : ""}`}>
+                    <input type="checkbox" checked={fireTheftForm.confirmed} onChange={setFireTheftValue("confirmed")} />
+                    <span>أؤكد صحة المعلومات وأوافق على إرسال طلب تأمين الحريق والسرقة إلى TRINSU.</span>
+                  </label>
+                  {fireTheftErrors.confirmed ? <p className="error-text">{fireTheftErrors.confirmed}</p> : null}
+                  {fireTheftSubmitError ? <p className="submit-error" role="alert">{fireTheftSubmitError}</p> : null}
+                  <button className="submit-button" type="submit" disabled={isFireTheftSubmitting}>
+                    {isFireTheftSubmitting ? <span className="spinner" aria-hidden="true" /> : <CheckCircle2 size={20} aria-hidden="true" />}
+                    {isFireTheftSubmitting ? "جاري الإرسال" : "إرسال طلب تأمين الحريق والسرقة"}
+                  </button>
+                </motion.section>
+
+                {fireTheftRequest ? (
+                  <motion.section className="success-panel" role="status" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+                    <CheckCircle2 size={42} aria-hidden="true" />
+                    <h2>تم إرسال طلب تأمين الحريق والسرقة</h2>
+                    <p>تم تسجيل الطلب في نظام TRINSU بنجاح.</p>
+                    <div className="success-numbers">
+                      <div>
+                        <span>رقم الطلب</span>
+                        <strong>{fireTheftRequest.requestNumber}</strong>
+                      </div>
+                      <div>
+                        <span>رقم التتبع</span>
+                        <strong>{fireTheftRequest.trackingNumber}</strong>
+                      </div>
+                    </div>
+                    <div className="success-status">
+                      <span>الحالة</span>
+                      <strong>{fireTheftRequest.status}</strong>
                     </div>
                   </motion.section>
                 ) : null}

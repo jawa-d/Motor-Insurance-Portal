@@ -82,3 +82,26 @@ export type HealthFormState = {
   notes: string;
   confirmed: boolean;
 };
+
+export type FireTheftFormState = {
+  fullName: string;
+  mobile: string;
+  email: string;
+  nationalId: string;
+  address: string;
+  city: string;
+  propertyType: string;
+  propertyUsage: string;
+  propertyAddress: string;
+  buildingValue: string;
+  contentsValue: string;
+  stockValue: string;
+  totalSumInsured: string;
+  currency: string;
+  coverageScope: string;
+  hasFireAlarm: boolean;
+  hasFireExtinguishers: boolean;
+  hasSecuritySystem: boolean;
+  notes: string;
+  confirmed: boolean;
+};

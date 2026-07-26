@@ -49,7 +49,7 @@ export type MotorRequestTracking = {
   customerName: string;
   vehicle?: string;
   subject?: string;
-  requestType?: "motor" | "engineering" | "health" | "unknown";
+  requestType?: "motor" | "engineering" | "health" | "fireTheft" | "unknown";
   project?: {
     name?: string;
     type?: string;
@@ -60,6 +60,13 @@ export type MotorRequestTracking = {
     planType?: string;
     coverageScope?: string;
     insuredMembersCount?: number;
+  };
+  property?: {
+    type?: string;
+    usage?: string;
+    address?: string;
+    totalSumInsured?: number;
+    currency?: string;
   };
 };
 
@@ -252,7 +259,7 @@ function normalizeTrackingResponse(response: MotorRequestTracking, requestType: 
   return {
     ...response,
     requestType,
-    subject: response.subject ?? response.vehicle ?? response.project?.name ?? response.health?.planType,
+    subject: response.subject ?? response.vehicle ?? response.project?.name ?? response.health?.planType ?? response.property?.type,
   };
 }
 
@@ -375,11 +382,35 @@ export async function trackMotorRequest(trackingNumber: string) {
       }
     }
 
-    const healthTracking = await getJson<MotorRequestTracking>(
+    try {
+      const healthTracking = await getJson<MotorRequestTracking>(
         `/api/v1/public/health-requests/${encodedTrackingNumber}`,
       );
 
-    return normalizeTrackingResponse(healthTracking, "health");
+      return normalizeTrackingResponse(healthTracking, "health");
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.status !== 404) {
+        throw error;
+      }
+    }
+
+    try {
+      const fireTheftTracking = await getJson<MotorRequestTracking>(
+        `/api/v1/public/fire-theft-requests/track/${encodedTrackingNumber}`,
+      );
+
+      return normalizeTrackingResponse(fireTheftTracking, "fireTheft");
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.status !== 404) {
+        throw error;
+      }
+    }
+
+    const fireTheftTracking = await getJson<MotorRequestTracking>(
+      `/api/v1/public/fire-theft-requests/${encodedTrackingNumber}`,
+    );
+
+    return normalizeTrackingResponse(fireTheftTracking, "fireTheft");
   }
 
   return getSameOriginJson<MotorRequestTracking>(`/api/motor-request-track?trackingNumber=${encodedTrackingNumber}`);

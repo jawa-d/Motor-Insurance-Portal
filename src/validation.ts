@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { EngineeringFormState, FormState, HealthFormState } from "./types";
+import type { EngineeringFormState, FireTheftFormState, FormState, HealthFormState } from "./types";
 
 const requiredText = (message: string) => z.string().trim().min(1, message);
 
@@ -146,6 +146,55 @@ export const initialHealthForm: HealthFormState = {
   coverageEndDate: "",
   estimatedAnnualPremium: "",
   currency: "IQD",
+  notes: "",
+  confirmed: false,
+};
+
+export const createFireTheftSchema = (messages: {
+  fieldRequired: string;
+}) =>
+  z.object({
+    fullName: requiredText(messages.fieldRequired),
+    mobile: requiredText(messages.fieldRequired),
+    email: z.string(),
+    nationalId: requiredText(messages.fieldRequired),
+    address: z.string(),
+    city: requiredText(messages.fieldRequired),
+    propertyType: requiredText(messages.fieldRequired),
+    propertyUsage: requiredText(messages.fieldRequired),
+    propertyAddress: requiredText(messages.fieldRequired),
+    buildingValue: requiredText(messages.fieldRequired),
+    contentsValue: z.string(),
+    stockValue: z.string(),
+    totalSumInsured: requiredText(messages.fieldRequired),
+    currency: requiredText(messages.fieldRequired),
+    coverageScope: requiredText(messages.fieldRequired),
+    hasFireAlarm: z.boolean(),
+    hasFireExtinguishers: z.boolean(),
+    hasSecuritySystem: z.boolean(),
+    notes: z.string(),
+    confirmed: z.boolean(),
+  });
+
+export const initialFireTheftForm: FireTheftFormState = {
+  fullName: "",
+  mobile: "",
+  email: "",
+  nationalId: "",
+  address: "",
+  city: "Baghdad",
+  propertyType: "Warehouse",
+  propertyUsage: "",
+  propertyAddress: "",
+  buildingValue: "",
+  contentsValue: "",
+  stockValue: "",
+  totalSumInsured: "",
+  currency: "IQD",
+  coverageScope: "Fire and theft",
+  hasFireAlarm: false,
+  hasFireExtinguishers: false,
+  hasSecuritySystem: false,
   notes: "",
   confirmed: false,
 };
