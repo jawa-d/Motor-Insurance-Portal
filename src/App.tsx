@@ -13,6 +13,7 @@ import {
   Flame,
   Globe2,
   HeartPulse,
+  Home,
   Info,
   Mail,
   MapPin,
@@ -317,6 +318,8 @@ function App() {
     setPage(nextPage);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  const navClass = (navPage: Page) => `icon-button${page === navPage ? " active" : ""}`;
 
   const openTrackingRequest = (nextTrackingNumber: string) => {
     const encodedTrackingNumber = encodeURIComponent(nextTrackingNumber.trim());
@@ -884,32 +887,40 @@ function App() {
           <img src="/brand/iraq-takaful-logo.png" alt={t.brand} />
           <span>{t.portal}</span>
         </a>
-        <div className="header-actions">
-          <a className="icon-button" href="/motor" onClick={navigate("motor")}>
+        <nav className="header-actions" aria-label="روابط الصفحات">
+          <a className={navClass("home")} href="/" onClick={navigate("home")}>
+            <Home size={18} aria-hidden="true" />
+            الرئيسية
+          </a>
+          <a className={navClass("motor")} href="/motor" onClick={navigate("motor")}>
             <CarFront size={18} aria-hidden="true" />
             طلب مركبات
           </a>
-          <a className="icon-button" href="/engineering" onClick={navigate("engineering")}>
+          <a className={navClass("engineering")} href="/engineering" onClick={navigate("engineering")}>
             <Building2 size={18} aria-hidden="true" />
             تأمين هندسي
           </a>
-          <a className="icon-button" href="/health" onClick={navigate("health")}>
+          <a className={navClass("health")} href="/health" onClick={navigate("health")}>
             <HeartPulse size={18} aria-hidden="true" />
             تأمين صحي
           </a>
-          <a className="icon-button" href="/fire-theft" onClick={navigate("fire-theft")}>
+          <a className={navClass("fire-theft")} href="/fire-theft" onClick={navigate("fire-theft")}>
             <Flame size={18} aria-hidden="true" />
             حريق وسرقة
           </a>
-          <a className="icon-button" href="/general-accident" onClick={navigate("general-accident")}>
+          <a className={navClass("general-accident")} href="/general-accident" onClick={navigate("general-accident")}>
             <ShieldAlert size={18} aria-hidden="true" />
             حوادث عامة
           </a>
-          <a className="icon-button" href="/travel" onClick={navigate("travel")}>
+          <a className={navClass("travel")} href="/travel" onClick={navigate("travel")}>
             <Plane size={18} aria-hidden="true" />
             سفر
           </a>
-          <a className="icon-button" href="/support" onClick={navigate("support")}>
+          <a className={navClass("track")} href="/track" onClick={navigate("track")}>
+            <MapPinned size={18} aria-hidden="true" />
+            تتبع
+          </a>
+          <a className={navClass("support")} href="/support" onClick={navigate("support")}>
             <Phone size={18} aria-hidden="true" />
             {t.support}
           </a>
@@ -921,7 +932,7 @@ function App() {
             {darkMode ? <Sun size={18} aria-hidden="true" /> : <Moon size={18} aria-hidden="true" />}
             {darkMode ? t.light : t.dark}
           </button>
-        </div>
+        </nav>
       </header>
 
       <main id="top">

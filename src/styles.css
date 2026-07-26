@@ -80,7 +80,7 @@ a,
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 1rem clamp(1rem, 4vw, 4rem);
+  padding: 0.85rem clamp(1rem, 4vw, 4rem);
   border-bottom: 1px solid var(--line);
   background: color-mix(in srgb, var(--surface) 88%, transparent);
   backdrop-filter: blur(18px);
@@ -118,7 +118,9 @@ a,
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .icon-button,
@@ -140,10 +142,19 @@ a,
 .icon-button,
 .ghost-button {
   min-height: 42px;
-  padding: 0.65rem 0.9rem;
+  padding: 0.62rem 0.82rem;
   border: 1px solid var(--line);
   background: var(--surface-strong);
   color: var(--text);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.icon-button.active {
+  border-color: color-mix(in srgb, var(--green) 55%, var(--line));
+  background: color-mix(in srgb, var(--green) 12%, var(--surface-strong));
+  color: var(--green-dark);
+  box-shadow: 0 10px 24px rgba(15, 138, 75, 0.12);
 }
 
 .ghost-link {
@@ -1670,10 +1681,12 @@ h1 {
 
   .header-actions {
     width: 100%;
+    justify-content: stretch;
   }
 
   .icon-button {
-    flex: 1;
+    flex: 1 1 calc(50% - 0.5rem);
+    min-width: 0;
   }
 
   main {
