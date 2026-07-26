@@ -21,6 +21,7 @@ import {
   Moon,
   Phone,
   ShieldCheck,
+  ShieldAlert,
   Sun,
   X,
 } from "lucide-react";
@@ -33,6 +34,7 @@ import { translations, type Language } from "./i18n";
 import { ApiError } from "./services/api";
 import { submitEngineeringRequest } from "./services/engineering-request";
 import { submitFireTheftRequest } from "./services/fire-theft-request";
+import { submitGeneralAccidentRequest } from "./services/general-accident-request";
 import { submitHealthRequest } from "./services/health-request";
 import {
   submitMotorRequest,
@@ -41,15 +43,17 @@ import {
   type MotorRequestUploadProgress,
   type PublicMotorRequestStatus,
 } from "./services/motor-request";
-import type { DocumentKey, EngineeringFormState, Errors, FireTheftFormState, FormState, HealthFormState, UploadFile } from "./types";
+import type { DocumentKey, EngineeringFormState, Errors, FireTheftFormState, FormState, GeneralAccidentFormState, HealthFormState, UploadFile } from "./types";
 import {
   createEngineeringSchema,
   createFireTheftSchema,
+  createGeneralAccidentSchema,
   createHealthSchema,
   createSchema,
   initialEngineeringForm,
   initialFireTheftForm,
   initialForm,
+  initialGeneralAccidentForm,
   initialHealthForm,
 } from "./validation";
 
@@ -80,7 +84,7 @@ const supportWhatsApp = [
 const fallbackFormUrl =
   "https://docs.google.com/forms/d/e/1FAIpQLSc_xrj87VpZj0VRte-KCnaidxUUIVx1t5brl7NaBVJXRls_qA/viewform?usp=publish-editor";
 
-type Page = "home" | "motor" | "engineering" | "health" | "fire-theft" | "track" | "support";
+type Page = "home" | "motor" | "engineering" | "health" | "fire-theft" | "general-accident" | "track" | "support";
 
 const getCurrentPage = (): Page => {
   const path = window.location.pathname.replace(/\/+$/, "");
@@ -91,6 +95,7 @@ const getCurrentPage = (): Page => {
   if (path === "/engineering") return "engineering";
   if (path === "/health") return "health";
   if (path === "/fire-theft") return "fire-theft";
+  if (path === "/general-accident") return "general-accident";
 
   return "home";
 };
@@ -148,6 +153,7 @@ function App() {
   const [engineeringForm, setEngineeringForm] = useState<EngineeringFormState>(initialEngineeringForm);
   const [healthForm, setHealthForm] = useState<HealthFormState>(initialHealthForm);
   const [fireTheftForm, setFireTheftForm] = useState<FireTheftFormState>(initialFireTheftForm);
+  const [generalAccidentForm, setGeneralAccidentForm] = useState<GeneralAccidentFormState>(initialGeneralAccidentForm);
   const [vehicleImages, setVehicleImages] = useState<UploadFile[]>([]);
   const [documents, setDocuments] = useState<Partial<Record<DocumentKey, UploadFile>>>({});
   const [errors, setErrors] = useState<Errors>({});
@@ -172,6 +178,10 @@ function App() {
   const [fireTheftSubmitError, setFireTheftSubmitError] = useState<string | null>(null);
   const [fireTheftRequest, setFireTheftRequest] = useState<{ requestNumber: string; trackingNumber: string; status: string } | null>(null);
   const [isFireTheftSubmitting, setIsFireTheftSubmitting] = useState(false);
+  const [generalAccidentErrors, setGeneralAccidentErrors] = useState<Errors>({});
+  const [generalAccidentSubmitError, setGeneralAccidentSubmitError] = useState<string | null>(null);
+  const [generalAccidentRequest, setGeneralAccidentRequest] = useState<{ requestNumber: string; trackingNumber: string; status: string } | null>(null);
+  const [isGeneralAccidentSubmitting, setIsGeneralAccidentSubmitting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<MotorRequestUploadProgress | null>(null);
 
@@ -183,6 +193,7 @@ function App() {
   const showEngineeringPage = page === "engineering";
   const showHealthPage = page === "health";
   const showFireTheftPage = page === "fire-theft";
+  const showGeneralAccidentPage = page === "general-accident";
   const showTrackingPage = page === "track";
   const showSupportPage = page === "support";
 
@@ -253,6 +264,13 @@ function App() {
       }),
     [t],
   );
+  const generalAccidentSchema = useMemo(
+    () =>
+      createGeneralAccidentSchema({
+        fieldRequired: t.fieldRequired,
+      }),
+    [t],
+  );
 
   useEffect(() => {
     const updatePage = () => setPage(getCurrentPage());
@@ -296,6 +314,12 @@ function App() {
     const value = event.target.type === "checkbox" ? (event.target as HTMLInputElement).checked : event.target.value;
     setFireTheftForm((current) => ({ ...current, [key]: value }));
     setFireTheftErrors((current) => ({ ...current, [key]: undefined }));
+  };
+
+  const setGeneralAccidentValue = (key: keyof GeneralAccidentFormState) => (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const value = event.target.type === "checkbox" ? (event.target as HTMLInputElement).checked : event.target.value;
+    setGeneralAccidentForm((current) => ({ ...current, [key]: value }));
+    setGeneralAccidentErrors((current) => ({ ...current, [key]: undefined }));
   };
 
   const getTrackingErrorMessage = (error: unknown) => {
@@ -644,6 +668,49 @@ function App() {
     }
   };
 
+  const submitGeneralAccident = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (isGeneralAccidentSubmitting) return;
+
+    const parsed = generalAccidentSchema.safeParse(generalAccidentForm);
+    const nextErrors: Errors = {};
+    setGeneralAccidentSubmitError(null);
+    setGeneralAccidentRequest(null);
+
+    if (!parsed.success) {
+      for (const issue of parsed.error.issues) {
+        nextErrors[String(issue.path[0])] = issue.message;
+      }
+    }
+
+    if (!generalAccidentForm.confirmed) {
+      nextErrors.confirmed = t.fieldRequired;
+    }
+
+    setGeneralAccidentErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length > 0) return;
+
+    try {
+      setIsGeneralAccidentSubmitting(true);
+      const result = await submitGeneralAccidentRequest(generalAccidentForm, agentCode);
+      setGeneralAccidentRequest(result);
+      setGeneralAccidentForm(initialGeneralAccidentForm);
+      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : getSubmitErrorMessage(error);
+      setGeneralAccidentSubmitError(message || getSubmitErrorMessage(error));
+      window.setTimeout(() => {
+        document.getElementById("general-accident-submit-error")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 0);
+    } finally {
+      setIsGeneralAccidentSubmitting(false);
+    }
+  };
+
   const trackingActiveIndex = trackingLookup ? trackingStatusIndex[trackingLookup.status] : 0;
   const trackingUpdatedAt = trackingLookup
     ? new Intl.DateTimeFormat(language === "ar" ? "ar-IQ" : "en", {
@@ -672,8 +739,12 @@ function App() {
         ? language === "ar"
           ? "العقار"
           : "Property"
+      : trackingLookup?.requestType === "generalAccident"
+        ? language === "ar"
+          ? "المؤمن له"
+          : "Insured"
       : t.vehicle;
-  const trackingSubjectValue = trackingLookup?.subject ?? trackingLookup?.vehicle ?? trackingLookup?.health?.planType ?? trackingLookup?.property?.type ?? "-";
+  const trackingSubjectValue = trackingLookup?.subject ?? trackingLookup?.vehicle ?? trackingLookup?.health?.planType ?? trackingLookup?.property?.type ?? trackingLookup?.accident?.insuredName ?? "-";
 
   return (
     <div className={`${darkMode ? "app dark" : "app"} ${isFormLocked ? "app-busy" : ""}`} dir={direction} lang={language}>
@@ -728,6 +799,10 @@ function App() {
           <a className="icon-button" href="/fire-theft" onClick={navigate("fire-theft")}>
             <Flame size={18} aria-hidden="true" />
             حريق وسرقة
+          </a>
+          <a className="icon-button" href="/general-accident" onClick={navigate("general-accident")}>
+            <ShieldAlert size={18} aria-hidden="true" />
+            حوادث عامة
           </a>
           <a className="icon-button" href="/support" onClick={navigate("support")}>
             <Phone size={18} aria-hidden="true" />
@@ -793,6 +868,10 @@ function App() {
               <Flame size={20} aria-hidden="true" />
               طلب تأمين حريق وسرقة
             </a>
+            <a className="ghost-link" href="/general-accident" onClick={navigate("general-accident")}>
+              <ShieldAlert size={20} aria-hidden="true" />
+              طلب تأمين حوادث عامة
+            </a>
             <a className="ghost-link" href="/track" onClick={navigate("track")}>
               <MapPinned size={20} aria-hidden="true" />
               {t.trackRequest}
@@ -850,6 +929,12 @@ function App() {
             <h2>تأمين الحريق والسرقة</h2>
             <p>سجّل بيانات العقار وقيمة المبنى والمحتويات وأنظمة السلامة لإرسال طلب تأمين جديد.</p>
             <a href="/fire-theft" onClick={navigate("fire-theft")}>فتح الفورمة</a>
+          </article>
+          <article>
+            <span><ShieldAlert size={22} aria-hidden="true" /></span>
+            <h2>تأمين الحوادث العامة</h2>
+            <p>سجّل نشاط العمل وموقع الخطر وحدود التغطية لإرسال طلب حوادث عامة ومسؤولية طرف ثالث.</p>
+            <a href="/general-accident" onClick={navigate("general-accident")}>فتح الفورمة</a>
           </article>
           <article>
             <span><MapPinned size={22} aria-hidden="true" /></span>
@@ -1013,6 +1098,24 @@ function App() {
                     <div>
                       <dt>{language === "ar" ? "مبلغ التأمين" : "Sum insured"}</dt>
                       <dd>{`${trackingLookup.property.totalSumInsured} ${trackingLookup.property.currency ?? ""}`.trim()}</dd>
+                    </div>
+                  ) : null}
+                  {trackingLookup.requestType === "generalAccident" && trackingLookup.accident?.accidentType ? (
+                    <div>
+                      <dt>{language === "ar" ? "نوع الحادث" : "Accident type"}</dt>
+                      <dd>{trackingLookup.accident.accidentType}</dd>
+                    </div>
+                  ) : null}
+                  {trackingLookup.requestType === "generalAccident" && trackingLookup.accident?.riskLocation ? (
+                    <div>
+                      <dt>{language === "ar" ? "موقع الخطر" : "Risk location"}</dt>
+                      <dd>{trackingLookup.accident.riskLocation}</dd>
+                    </div>
+                  ) : null}
+                  {trackingLookup.requestType === "generalAccident" && trackingLookup.accident?.coverageLimit ? (
+                    <div>
+                      <dt>{language === "ar" ? "حد التغطية" : "Coverage limit"}</dt>
+                      <dd>{`${trackingLookup.accident.coverageLimit} ${trackingLookup.accident.currency ?? ""}`.trim()}</dd>
                     </div>
                   ) : null}
                   <div>
@@ -1384,6 +1487,130 @@ function App() {
                     <div className="success-status">
                       <span>الحالة</span>
                       <strong>{fireTheftRequest.status}</strong>
+                    </div>
+                  </motion.section>
+                ) : null}
+              </fieldset>
+            </form>
+          </>
+        ) : null}
+
+        {showGeneralAccidentPage ? (
+          <>
+            <motion.section className="engineering-hero general-accident-hero" {...sectionAnimation}>
+              <div>
+                <span className="eyebrow">
+                  <ShieldAlert size={18} aria-hidden="true" />
+                  تأمين الحوادث العامة
+                </span>
+                <h1>طلب تأمين حوادث عامة</h1>
+                <p>أدخل بيانات العميل والنشاط وموقع الخطر وحدود التغطية ليتم تسجيل الطلب ومتابعته داخل النظام.</p>
+              </div>
+              <div className="engineering-metrics general-accident-metrics" aria-hidden="true">
+                <span>GAC</span>
+                <strong>General Accident</strong>
+                <small>Liability request</small>
+              </div>
+            </motion.section>
+
+            <form id="general-accident-request-form" className="request-form" onSubmit={submitGeneralAccident} noValidate>
+              <fieldset className="form-fieldset" disabled={isGeneralAccidentSubmitting}>
+                <motion.section className="panel" {...sectionAnimation}>
+                  <h2>معلومات العميل</h2>
+                  <div className="grid three">
+                    <FloatingField id="gac-fullName" label="الاسم الكامل" value={generalAccidentForm.fullName} error={generalAccidentErrors.fullName} required onChange={setGeneralAccidentValue("fullName")} />
+                    <FloatingField id="gac-mobile" label="رقم الموبايل" value={generalAccidentForm.mobile} error={generalAccidentErrors.mobile} required inputMode="tel" onChange={setGeneralAccidentValue("mobile")} />
+                    <FloatingField id="gac-email" label="البريد الإلكتروني" value={generalAccidentForm.email} error={generalAccidentErrors.email} type="email" onChange={setGeneralAccidentValue("email")} />
+                    <FloatingField id="gac-nationalId" label="الرقم الوطني" value={generalAccidentForm.nationalId} error={generalAccidentErrors.nationalId} required onChange={setGeneralAccidentValue("nationalId")} />
+                    <FloatingField id="gac-city" label="المدينة" value={generalAccidentForm.city} error={generalAccidentErrors.city} required onChange={setGeneralAccidentValue("city")} />
+                    <FloatingField id="gac-address" label="عنوان العميل" value={generalAccidentForm.address} error={generalAccidentErrors.address} onChange={setGeneralAccidentValue("address")} />
+                  </div>
+                </motion.section>
+
+                <motion.section className="panel" {...sectionAnimation}>
+                  <h2>تفاصيل النشاط والخطر</h2>
+                  <div className="grid three">
+                    <FloatingField id="gac-insuredName" label="اسم المؤمن له" value={generalAccidentForm.insuredName} error={generalAccidentErrors.insuredName} required onChange={setGeneralAccidentValue("insuredName")} />
+                    <FloatingField id="gac-businessActivity" label="نشاط العمل" value={generalAccidentForm.businessActivity} error={generalAccidentErrors.businessActivity} required onChange={setGeneralAccidentValue("businessActivity")} />
+                    <FloatingField id="gac-accidentType" label="نوع الحادث" value={generalAccidentForm.accidentType} error={generalAccidentErrors.accidentType} required onChange={setGeneralAccidentValue("accidentType")} />
+                    <FloatingField id="gac-coverageScope" label="نطاق التغطية" value={generalAccidentForm.coverageScope} error={generalAccidentErrors.coverageScope} required onChange={setGeneralAccidentValue("coverageScope")} />
+                    <FloatingField id="gac-riskLocation" label="موقع الخطر" value={generalAccidentForm.riskLocation} error={generalAccidentErrors.riskLocation} required onChange={setGeneralAccidentValue("riskLocation")} />
+                    <FloatingField id="gac-riskCity" label="مدينة الخطر" value={generalAccidentForm.riskCity} error={generalAccidentErrors.riskCity} required onChange={setGeneralAccidentValue("riskCity")} />
+                  </div>
+                </motion.section>
+
+                <motion.section className="panel" {...sectionAnimation}>
+                  <h2>حدود التغطية والأعداد</h2>
+                  <div className="grid three">
+                    <FloatingField id="gac-employeesCount" label="عدد الموظفين" value={generalAccidentForm.employeesCount} error={generalAccidentErrors.employeesCount} required inputMode="numeric" onChange={setGeneralAccidentValue("employeesCount")} />
+                    <FloatingField id="gac-beneficiariesCount" label="عدد المستفيدين" value={generalAccidentForm.beneficiariesCount} error={generalAccidentErrors.beneficiariesCount} inputMode="numeric" onChange={setGeneralAccidentValue("beneficiariesCount")} />
+                    <FloatingField id="gac-coverageLimit" label="حد التغطية" value={generalAccidentForm.coverageLimit} error={generalAccidentErrors.coverageLimit} required inputMode="decimal" onChange={setGeneralAccidentValue("coverageLimit")} />
+                    <FloatingField id="gac-deductibleAmount" label="مبلغ التحمل" value={generalAccidentForm.deductibleAmount} error={generalAccidentErrors.deductibleAmount} inputMode="decimal" onChange={setGeneralAccidentValue("deductibleAmount")} />
+                    <FloatingField id="gac-estimatedAnnualWages" label="الأجور السنوية المقدرة" value={generalAccidentForm.estimatedAnnualWages} error={generalAccidentErrors.estimatedAnnualWages} inputMode="decimal" onChange={setGeneralAccidentValue("estimatedAnnualWages")} />
+                    <FloatingField id="gac-currency" label="العملة" value={generalAccidentForm.currency} error={generalAccidentErrors.currency} required onChange={setGeneralAccidentValue("currency")} />
+                  </div>
+                  <div className="grid two">
+                    <label className="confirm compact-confirm">
+                      <input type="checkbox" checked={generalAccidentForm.hasSafetyProgram} onChange={setGeneralAccidentValue("hasSafetyProgram")} />
+                      <span>يوجد برنامج سلامة</span>
+                    </label>
+                    <label className="confirm compact-confirm">
+                      <input type="checkbox" checked={generalAccidentForm.previousClaims} onChange={setGeneralAccidentValue("previousClaims")} />
+                      <span>توجد مطالبات سابقة</span>
+                    </label>
+                  </div>
+                </motion.section>
+
+                <motion.section className="panel" {...sectionAnimation}>
+                  <h2>تفاصيل إضافية</h2>
+                  <div className="grid two">
+                    <FloatingField id="gac-riskDetails" label="تفاصيل الخطر" value={generalAccidentForm.riskDetails} error={generalAccidentErrors.riskDetails} multiline rows={6} onChange={setGeneralAccidentValue("riskDetails")} />
+                    <FloatingField id="gac-notes" label="ملاحظات" value={generalAccidentForm.notes} error={generalAccidentErrors.notes} multiline rows={6} onChange={setGeneralAccidentValue("notes")} />
+                  </div>
+                </motion.section>
+
+                <motion.section className="panel review-panel" {...sectionAnimation}>
+                  <h2>مراجعة الطلب</h2>
+                  <div className="review-grid">
+                    <span>العميل</span>
+                    <strong>{generalAccidentForm.fullName || "-"}</strong>
+                    <span>المؤمن له</span>
+                    <strong>{generalAccidentForm.insuredName || "-"}</strong>
+                    <span>نوع الحادث</span>
+                    <strong>{generalAccidentForm.accidentType || "-"}</strong>
+                    <span>حد التغطية</span>
+                    <strong>{generalAccidentForm.coverageLimit ? `${generalAccidentForm.coverageLimit} ${generalAccidentForm.currency}` : "-"}</strong>
+                  </div>
+                  <label className={`confirm ${generalAccidentErrors.confirmed ? "field-error" : ""}`}>
+                    <input type="checkbox" checked={generalAccidentForm.confirmed} onChange={setGeneralAccidentValue("confirmed")} />
+                    <span>أؤكد صحة المعلومات وأوافق على إرسال طلب تأمين الحوادث العامة إلى TRINSU.</span>
+                  </label>
+                  {generalAccidentErrors.confirmed ? <p className="error-text">{generalAccidentErrors.confirmed}</p> : null}
+                  {generalAccidentSubmitError ? <p id="general-accident-submit-error" className="submit-error" role="alert">{generalAccidentSubmitError}</p> : null}
+                  <button className="submit-button" type="submit" disabled={isGeneralAccidentSubmitting}>
+                    {isGeneralAccidentSubmitting ? <span className="spinner" aria-hidden="true" /> : <CheckCircle2 size={20} aria-hidden="true" />}
+                    {isGeneralAccidentSubmitting ? "جاري الإرسال" : "إرسال طلب تأمين الحوادث العامة"}
+                  </button>
+                </motion.section>
+
+                {generalAccidentRequest ? (
+                  <motion.section className="success-panel" role="status" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+                    <CheckCircle2 size={42} aria-hidden="true" />
+                    <h2>تم إرسال طلب تأمين الحوادث العامة</h2>
+                    <p>تم تسجيل الطلب في نظام TRINSU بنجاح.</p>
+                    <div className="success-numbers">
+                      <div>
+                        <span>رقم الطلب</span>
+                        <strong>{generalAccidentRequest.requestNumber}</strong>
+                      </div>
+                      <div>
+                        <span>رقم التتبع</span>
+                        <strong>{generalAccidentRequest.trackingNumber}</strong>
+                      </div>
+                    </div>
+                    <div className="success-status">
+                      <span>الحالة</span>
+                      <strong>{generalAccidentRequest.status}</strong>
                     </div>
                   </motion.section>
                 ) : null}

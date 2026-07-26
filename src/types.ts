@@ -105,3 +105,29 @@ export type FireTheftFormState = {
   notes: string;
   confirmed: boolean;
 };
+
+export type GeneralAccidentFormState = {
+  fullName: string;
+  mobile: string;
+  email: string;
+  nationalId: string;
+  address: string;
+  city: string;
+  insuredName: string;
+  businessActivity: string;
+  accidentType: string;
+  coverageScope: string;
+  riskLocation: string;
+  riskCity: string;
+  employeesCount: string;
+  beneficiariesCount: string;
+  coverageLimit: string;
+  deductibleAmount: string;
+  estimatedAnnualWages: string;
+  currency: string;
+  riskDetails: string;
+  hasSafetyProgram: boolean;
+  previousClaims: boolean;
+  notes: string;
+  confirmed: boolean;
+};

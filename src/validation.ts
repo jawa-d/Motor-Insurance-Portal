@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { EngineeringFormState, FireTheftFormState, FormState, HealthFormState } from "./types";
+import type { EngineeringFormState, FireTheftFormState, FormState, GeneralAccidentFormState, HealthFormState } from "./types";
 
 const requiredText = (message: string) => z.string().trim().min(1, message);
 
@@ -195,6 +195,61 @@ export const initialFireTheftForm: FireTheftFormState = {
   hasFireAlarm: false,
   hasFireExtinguishers: false,
   hasSecuritySystem: false,
+  notes: "",
+  confirmed: false,
+};
+
+export const createGeneralAccidentSchema = (messages: {
+  fieldRequired: string;
+}) =>
+  z.object({
+    fullName: requiredText(messages.fieldRequired),
+    mobile: requiredText(messages.fieldRequired),
+    email: z.string(),
+    nationalId: requiredText(messages.fieldRequired),
+    address: z.string(),
+    city: requiredText(messages.fieldRequired),
+    insuredName: requiredText(messages.fieldRequired),
+    businessActivity: requiredText(messages.fieldRequired),
+    accidentType: requiredText(messages.fieldRequired),
+    coverageScope: requiredText(messages.fieldRequired),
+    riskLocation: requiredText(messages.fieldRequired),
+    riskCity: requiredText(messages.fieldRequired),
+    employeesCount: requiredText(messages.fieldRequired),
+    beneficiariesCount: z.string(),
+    coverageLimit: requiredText(messages.fieldRequired),
+    deductibleAmount: z.string(),
+    estimatedAnnualWages: z.string(),
+    currency: requiredText(messages.fieldRequired),
+    riskDetails: z.string(),
+    hasSafetyProgram: z.boolean(),
+    previousClaims: z.boolean(),
+    notes: z.string(),
+    confirmed: z.boolean(),
+  });
+
+export const initialGeneralAccidentForm: GeneralAccidentFormState = {
+  fullName: "",
+  mobile: "",
+  email: "",
+  nationalId: "",
+  address: "",
+  city: "Baghdad",
+  insuredName: "",
+  businessActivity: "",
+  accidentType: "Public liability",
+  coverageScope: "General accident and third-party liability",
+  riskLocation: "",
+  riskCity: "Baghdad",
+  employeesCount: "",
+  beneficiariesCount: "0",
+  coverageLimit: "",
+  deductibleAmount: "",
+  estimatedAnnualWages: "",
+  currency: "IQD",
+  riskDetails: "",
+  hasSafetyProgram: false,
+  previousClaims: false,
   notes: "",
   confirmed: false,
 };
