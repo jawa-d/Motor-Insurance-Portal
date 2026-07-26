@@ -590,8 +590,12 @@ function App() {
       ? language === "ar"
         ? "المشروع"
         : "Project"
+      : trackingLookup?.requestType === "health"
+        ? language === "ar"
+          ? "الخطة الصحية"
+          : "Health plan"
       : t.vehicle;
-  const trackingSubjectValue = trackingLookup?.subject ?? trackingLookup?.vehicle ?? "-";
+  const trackingSubjectValue = trackingLookup?.subject ?? trackingLookup?.vehicle ?? trackingLookup?.health?.planType ?? "-";
 
   return (
     <div className={`${darkMode ? "app dark" : "app"} ${isFormLocked ? "app-busy" : ""}`} dir={direction} lang={language}>
@@ -893,6 +897,18 @@ function App() {
                     <div>
                       <dt>{language === "ar" ? "موقع المشروع" : "Project location"}</dt>
                       <dd>{trackingLookup.project.location}</dd>
+                    </div>
+                  ) : null}
+                  {trackingLookup.requestType === "health" && trackingLookup.health?.coverageScope ? (
+                    <div>
+                      <dt>{language === "ar" ? "نطاق التغطية" : "Coverage scope"}</dt>
+                      <dd>{trackingLookup.health.coverageScope}</dd>
+                    </div>
+                  ) : null}
+                  {trackingLookup.requestType === "health" && trackingLookup.health?.insuredMembersCount ? (
+                    <div>
+                      <dt>{language === "ar" ? "عدد المؤمنين" : "Insured members"}</dt>
+                      <dd>{trackingLookup.health.insuredMembersCount}</dd>
                     </div>
                   ) : null}
                   <div>
