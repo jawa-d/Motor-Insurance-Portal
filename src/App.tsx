@@ -291,9 +291,17 @@ function App() {
   );
 
   useEffect(() => {
-    const updatePage = () => setPage(getCurrentPage());
+    const updatePage = () => {
+      const nextPage = getCurrentPage();
+      setPage(nextPage);
+
+      if (nextPage === "track") {
+        setTrackingInput(new URLSearchParams(window.location.search).get("trackingNumber") ?? "");
+      }
+    };
 
     window.addEventListener("popstate", updatePage);
+    updatePage();
 
     return () => window.removeEventListener("popstate", updatePage);
   }, []);
@@ -307,6 +315,18 @@ function App() {
     }
 
     setPage(nextPage);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const openTrackingRequest = (nextTrackingNumber: string) => {
+    const encodedTrackingNumber = encodeURIComponent(nextTrackingNumber.trim());
+    const nextPath = `/track?trackingNumber=${encodedTrackingNumber}`;
+
+    window.history.pushState({}, "", nextPath);
+    setPage("track");
+    setTrackingInput(nextTrackingNumber);
+    setTrackingError(null);
+    setTrackingLookup(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -1825,6 +1845,12 @@ function App() {
                     <div className="success-status">
                       <span>الحالة</span>
                       <strong>{travelRequest.status}</strong>
+                    </div>
+                    <div className="success-actions">
+                      <button className="submit-button" type="button" onClick={() => openTrackingRequest(travelRequest.trackingNumber)}>
+                        <MapPinned size={18} aria-hidden="true" />
+                        تتبع الطلب
+                      </button>
                     </div>
                   </motion.section>
                 ) : null}
