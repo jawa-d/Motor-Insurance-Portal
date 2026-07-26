@@ -178,6 +178,8 @@ function sanitizeFilename(filename: string) {
   return cleanFilename || "upload";
 }
 
+
+
 function createUploadPath(file: File) {
   const randomId = typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const safeFilename = sanitizeFilename(file.name);
