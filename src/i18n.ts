@@ -2,8 +2,8 @@ export type Language = "ar" | "en";
 
 export const translations = {
   ar: {
-    brand: "تكافل العراق للتأمين التكافلي",
-    portal: "بوابة طلبات تأمين المركبات",
+    brand: "شركة تكافل العراق للتأمين التكافلي",
+    portal: "بوابة طلبات تأمين التكافلي",
     headline: "اول شركة تأمين تكافلي في العراق",
     title: "طلب تأمين مركبة",
     subtitle:

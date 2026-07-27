@@ -1047,7 +1047,7 @@ function App() {
               <ShieldCheck size={18} aria-hidden="true" />
               {t.brand}
             </span>
-            <h1>بوابة طلبات التأمين</h1>
+            <h1>{t.portal}</h1>
             <p>قدّم طلب تأمين المركبات أو التأمين الهندسي، تابع حالة طلبك، وتواصل مع فريق الدعم من مكان واحد.</p>
             <a className="primary-link" href="/motor" onClick={navigate("motor")}>
               <CarFront size={20} aria-hidden="true" />
