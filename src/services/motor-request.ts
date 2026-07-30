@@ -483,29 +483,7 @@ export async function trackMotorRequest(trackingNumber: string) {
       }
     }
 
-    try {
-      const energyTracking = await getJson<MotorRequestTracking>(
-        `/api/v1/public/energy-requests/track/${encodedTrackingNumber}`,
-      );
 
-      return normalizeTrackingResponse(energyTracking, "energy");
-    } catch (error) {
-      if (!(error instanceof ApiError) || error.status !== 404) {
-        throw error;
-      }
-    }
-
-    try {
-      const energyTracking = await getJson<MotorRequestTracking>(
-        `/api/v1/public/energy-requests/${encodedTrackingNumber}`,
-      );
-
-      return normalizeTrackingResponse(energyTracking, "energy");
-    } catch (error) {
-      if (!(error instanceof ApiError) || error.status !== 404) {
-        throw error;
-      }
-    }
     try {
       const travelTracking = await getJson<MotorRequestTracking>(
         `/api/v1/public/travel-requests/${encodedTrackingNumber}`,
@@ -539,4 +517,5 @@ export async function trackMotorRequest(trackingNumber: string) {
 
   return getSameOriginJson<MotorRequestTracking>(`/api/motor-request-track?trackingNumber=${encodedTrackingNumber}`);
 }
+
 

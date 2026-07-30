@@ -1,4 +1,4 @@
-function sendJson(response, statusCode, body) {
+﻿function sendJson(response, statusCode, body) {
   response.statusCode = statusCode;
   response.setHeader("Content-Type", "application/json; charset=utf-8");
   response.end(JSON.stringify(body));
@@ -15,7 +15,7 @@ function normalizeTrackingPayload(payload, requestType) {
   return {
     ...payload,
     requestType,
-    subject: payload.subject ?? payload.vehicle ?? payload.projectName ?? payload.project?.name ?? payload.health?.planType ?? payload.property?.type ?? payload.accident?.insuredName ?? payload.travel?.destinationCountry ?? payload.transport?.cargoDescription,
+    subject: payload.subject ?? payload.vehicle ?? payload.projectName ?? payload.project?.name ?? payload.health?.planType ?? payload.property?.type ?? payload.accident?.insuredName ?? payload.travel?.destinationCountry ?? payload.transport?.cargoDescription ?? payload.energy?.projectName,
   };
 }
 
@@ -140,3 +140,4 @@ export default async function handler(request, response) {
   response.setHeader("Content-Type", lastContentType);
   response.end(lastResponseBody || JSON.stringify({ message: "Request was not found." }));
 }
+
