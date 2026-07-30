@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+﻿import { motion } from "framer-motion";
 import {
   AlertTriangle,
   Building2,
@@ -27,6 +27,7 @@ import {
   Sun,
   Truck,
   X,
+  Zap,
 } from "lucide-react";
 import { type CSSProperties, type ChangeEvent, useEffect, useMemo, useState } from "react";
 import { DocumentUpload } from "./components/DocumentUpload";
@@ -35,6 +36,7 @@ import { ProgressSteps } from "./components/ProgressSteps";
 import { UploadZone } from "./components/UploadZone";
 import { translations, type Language } from "./i18n";
 import { ApiError } from "./services/api";
+import { submitEnergyRequest } from "./services/energy-request";
 import { submitEngineeringRequest } from "./services/engineering-request";
 import { submitFireTheftRequest } from "./services/fire-theft-request";
 import { submitGeneralAccidentRequest } from "./services/general-accident-request";
@@ -48,8 +50,9 @@ import {
   type MotorRequestUploadProgress,
   type PublicMotorRequestStatus,
 } from "./services/motor-request";
-import type { DocumentKey, EngineeringFormState, Errors, FireTheftFormState, FormState, GeneralAccidentFormState, HealthFormState, TransportFormState, TravelFormState, UploadFile } from "./types";
+import type { DocumentKey, EnergyFormState, EngineeringFormState, Errors, FireTheftFormState, FormState, GeneralAccidentFormState, HealthFormState, TransportFormState, TravelFormState, UploadFile } from "./types";
 import {
+  createEnergySchema,
   createEngineeringSchema,
   createFireTheftSchema,
   createGeneralAccidentSchema,
@@ -57,6 +60,7 @@ import {
   createSchema,
   createTransportSchema,
   createTravelSchema,
+  initialEnergyForm,
   initialEngineeringForm,
   initialFireTheftForm,
   initialForm,
@@ -93,7 +97,7 @@ const supportWhatsApp = [
 const fallbackFormUrl =
   "https://docs.google.com/forms/d/e/1FAIpQLSc_xrj87VpZj0VRte-KCnaidxUUIVx1t5brl7NaBVJXRls_qA/viewform?usp=publish-editor";
 
-type Page = "home" | "motor" | "engineering" | "health" | "fire-theft" | "general-accident" | "travel" | "transport" | "track" | "support";
+type Page = "home" | "motor" | "engineering" | "health" | "fire-theft" | "general-accident" | "energy" | "travel" | "transport" | "track" | "support";
 
 const getCurrentPage = (): Page => {
   const path = window.location.pathname.replace(/\/+$/, "");
@@ -105,6 +109,7 @@ const getCurrentPage = (): Page => {
   if (path === "/health") return "health";
   if (path === "/fire-theft") return "fire-theft";
   if (path === "/general-accident") return "general-accident";
+  if (path === "/energy") return "energy";
   if (path === "/travel") return "travel";
   if (path === "/transport") return "transport";
 
@@ -135,14 +140,14 @@ const trackingStatusTheme: Record<PublicMotorRequestStatus, { color: string; nam
 
 const trackingStatusDescription: Record<Language, Record<PublicMotorRequestStatus, string>> = {
   ar: {
-    SUBMITTED: "تم استلام الطلب بنجاح وهو الآن ضمن قائمة المتابعة لدى فريق التأمين.",
-    RECEIVED: "تم استلام الطلب بنجاح وهو الآن ضمن قائمة المتابعة لدى فريق التأمين.",
-    UNDER_REVIEW: "الطلب قيد المراجعة، ويتم تدقيق المعلومات الأساسية قبل الانتقال للخطوة التالية.",
-    DOCUMENTS_CHECK: "الفريق يتحقق من المستندات المرفوعة ويتأكد من وضوحها واكتمالها.",
-    QUOTE_PREPARATION: "يتم تجهيز العرض التأميني المناسب حسب بيانات المركبة والطلب.",
-    CONTACTING_CUSTOMER: "سيتم التواصل معك قريباً لإكمال التفاصيل أو مشاركة العرض.",
-    COMPLETED: "اكتملت معالجة الطلب، ويمكنك التواصل مع فريق الدعم لأي متابعة إضافية.",
-    REJECTED: "تم رفض الطلب. يرجى التواصل مع فريق الدعم لمعرفة السبب والخطوات الممكنة.",
+    SUBMITTED: "ØªÙ… Ø§Ø³ØªÙ„Ø§Ù… Ø§Ù„Ø·Ù„Ø¨ Ø¨Ù†Ø¬Ø§Ø­ ÙˆÙ‡Ùˆ Ø§Ù„Ø¢Ù† Ø¶Ù…Ù† Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ù…ØªØ§Ø¨Ø¹Ø© Ù„Ø¯Ù‰ ÙØ±ÙŠÙ‚ Ø§Ù„ØªØ£Ù…ÙŠÙ†.",
+    RECEIVED: "ØªÙ… Ø§Ø³ØªÙ„Ø§Ù… Ø§Ù„Ø·Ù„Ø¨ Ø¨Ù†Ø¬Ø§Ø­ ÙˆÙ‡Ùˆ Ø§Ù„Ø¢Ù† Ø¶Ù…Ù† Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ù…ØªØ§Ø¨Ø¹Ø© Ù„Ø¯Ù‰ ÙØ±ÙŠÙ‚ Ø§Ù„ØªØ£Ù…ÙŠÙ†.",
+    UNDER_REVIEW: "Ø§Ù„Ø·Ù„Ø¨ Ù‚ÙŠØ¯ Ø§Ù„Ù…Ø±Ø§Ø¬Ø¹Ø©ØŒ ÙˆÙŠØªÙ… ØªØ¯Ù‚ÙŠÙ‚ Ø§Ù„Ù…Ø¹Ù„ÙˆÙ…Ø§Øª Ø§Ù„Ø£Ø³Ø§Ø³ÙŠØ© Ù‚Ø¨Ù„ Ø§Ù„Ø§Ù†ØªÙ‚Ø§Ù„ Ù„Ù„Ø®Ø·ÙˆØ© Ø§Ù„ØªØ§Ù„ÙŠØ©.",
+    DOCUMENTS_CHECK: "Ø§Ù„ÙØ±ÙŠÙ‚ ÙŠØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„Ù…Ø³ØªÙ†Ø¯Ø§Øª Ø§Ù„Ù…Ø±ÙÙˆØ¹Ø© ÙˆÙŠØªØ£ÙƒØ¯ Ù…Ù† ÙˆØ¶ÙˆØ­Ù‡Ø§ ÙˆØ§ÙƒØªÙ…Ø§Ù„Ù‡Ø§.",
+    QUOTE_PREPARATION: "ÙŠØªÙ… ØªØ¬Ù‡ÙŠØ² Ø§Ù„Ø¹Ø±Ø¶ Ø§Ù„ØªØ£Ù…ÙŠÙ†ÙŠ Ø§Ù„Ù…Ù†Ø§Ø³Ø¨ Ø­Ø³Ø¨ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ù…Ø±ÙƒØ¨Ø© ÙˆØ§Ù„Ø·Ù„Ø¨.",
+    CONTACTING_CUSTOMER: "Ø³ÙŠØªÙ… Ø§Ù„ØªÙˆØ§ØµÙ„ Ù…Ø¹Ùƒ Ù‚Ø±ÙŠØ¨Ø§Ù‹ Ù„Ø¥ÙƒÙ…Ø§Ù„ Ø§Ù„ØªÙØ§ØµÙŠÙ„ Ø£Ùˆ Ù…Ø´Ø§Ø±ÙƒØ© Ø§Ù„Ø¹Ø±Ø¶.",
+    COMPLETED: "Ø§ÙƒØªÙ…Ù„Øª Ù…Ø¹Ø§Ù„Ø¬Ø© Ø§Ù„Ø·Ù„Ø¨ØŒ ÙˆÙŠÙ…ÙƒÙ†Ùƒ Ø§Ù„ØªÙˆØ§ØµÙ„ Ù…Ø¹ ÙØ±ÙŠÙ‚ Ø§Ù„Ø¯Ø¹Ù… Ù„Ø£ÙŠ Ù…ØªØ§Ø¨Ø¹Ø© Ø¥Ø¶Ø§ÙÙŠØ©.",
+    REJECTED: "ØªÙ… Ø±ÙØ¶ Ø§Ù„Ø·Ù„Ø¨. ÙŠØ±Ø¬Ù‰ Ø§Ù„ØªÙˆØ§ØµÙ„ Ù…Ø¹ ÙØ±ÙŠÙ‚ Ø§Ù„Ø¯Ø¹Ù… Ù„Ù…Ø¹Ø±ÙØ© Ø§Ù„Ø³Ø¨Ø¨ ÙˆØ§Ù„Ø®Ø·ÙˆØ§Øª Ø§Ù„Ù…Ù…ÙƒÙ†Ø©.",
   },
   en: {
     SUBMITTED: "Your application was received successfully and is now queued with the insurance team.",
@@ -165,6 +170,7 @@ function App() {
   const [healthForm, setHealthForm] = useState<HealthFormState>(initialHealthForm);
   const [fireTheftForm, setFireTheftForm] = useState<FireTheftFormState>(initialFireTheftForm);
   const [generalAccidentForm, setGeneralAccidentForm] = useState<GeneralAccidentFormState>(initialGeneralAccidentForm);
+  const [energyForm, setEnergyForm] = useState<EnergyFormState>(initialEnergyForm);
   const [travelForm, setTravelForm] = useState<TravelFormState>(initialTravelForm);
   const [transportForm, setTransportForm] = useState<TransportFormState>(initialTransportForm);
   const [vehicleImages, setVehicleImages] = useState<UploadFile[]>([]);
@@ -195,6 +201,10 @@ function App() {
   const [generalAccidentSubmitError, setGeneralAccidentSubmitError] = useState<string | null>(null);
   const [generalAccidentRequest, setGeneralAccidentRequest] = useState<{ requestNumber: string; trackingNumber: string; status: string } | null>(null);
   const [isGeneralAccidentSubmitting, setIsGeneralAccidentSubmitting] = useState(false);
+  const [energyErrors, setEnergyErrors] = useState<Errors>({});
+  const [energySubmitError, setEnergySubmitError] = useState<string | null>(null);
+  const [energyRequest, setEnergyRequest] = useState<{ requestNumber: string; trackingNumber: string; status: string } | null>(null);
+  const [isEnergySubmitting, setIsEnergySubmitting] = useState(false);
   const [travelErrors, setTravelErrors] = useState<Errors>({});
   const [travelSubmitError, setTravelSubmitError] = useState<string | null>(null);
   const [travelRequest, setTravelRequest] = useState<{ requestNumber: string; trackingNumber: string; status: string } | null>(null);
@@ -215,6 +225,7 @@ function App() {
   const showHealthPage = page === "health";
   const showFireTheftPage = page === "fire-theft";
   const showGeneralAccidentPage = page === "general-accident";
+  const showEnergyPage = page === "energy";
   const showTravelPage = page === "travel";
   const showTransportPage = page === "transport";
   const showTrackingPage = page === "track";
@@ -290,6 +301,13 @@ function App() {
   const generalAccidentSchema = useMemo(
     () =>
       createGeneralAccidentSchema({
+        fieldRequired: t.fieldRequired,
+      }),
+    [t],
+  );
+  const energySchema = useMemo(
+    () =>
+      createEnergySchema({
         fieldRequired: t.fieldRequired,
       }),
     [t],
@@ -379,6 +397,12 @@ function App() {
     const value = event.target.type === "checkbox" ? (event.target as HTMLInputElement).checked : event.target.value;
     setGeneralAccidentForm((current) => ({ ...current, [key]: value }));
     setGeneralAccidentErrors((current) => ({ ...current, [key]: undefined }));
+  };
+
+  const setEnergyValue = (key: keyof EnergyFormState) => (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const value = event.target.type === "checkbox" ? (event.target as HTMLInputElement).checked : event.target.value;
+    setEnergyForm((current) => ({ ...current, [key]: value }));
+    setEnergyErrors((current) => ({ ...current, [key]: undefined }));
   };
 
   const setTravelValue = (key: keyof TravelFormState) => (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -477,8 +501,8 @@ function App() {
     const rows = [
       [t.requestNumber, requestNumber],
       [t.trackingNumber, trackingNumber],
-      [language === "ar" ? "حالة الطلب" : "Request status", t.trackReceived],
-      [language === "ar" ? "وقت الإرسال" : "Submitted at", submittedAt],
+      [language === "ar" ? "Ø­Ø§Ù„Ø© Ø§Ù„Ø·Ù„Ø¨" : "Request status", t.trackReceived],
+      [language === "ar" ? "ÙˆÙ‚Øª Ø§Ù„Ø¥Ø±Ø³Ø§Ù„" : "Submitted at", submittedAt],
       [t.fullName, value(snapshot.fullName)],
       [t.phone, value(snapshot.phone)],
       [t.email, value(snapshot.email)],
@@ -532,7 +556,7 @@ function App() {
     <section class="head">
       <div>
         <div class="brand">${escapeHtml(t.brand)}</div>
-        <div class="title">${escapeHtml(language === "ar" ? "استمارة طلب تأمين مركبة" : "Motor Insurance Application")}</div>
+        <div class="title">${escapeHtml(language === "ar" ? "Ø§Ø³ØªÙ…Ø§Ø±Ø© Ø·Ù„Ø¨ ØªØ£Ù…ÙŠÙ† Ù…Ø±ÙƒØ¨Ø©" : "Motor Insurance Application")}</div>
       </div>
       <div class="status">${escapeHtml(t.trackReceived)}</div>
     </section>
@@ -540,7 +564,7 @@ function App() {
       <div class="number"><span>${escapeHtml(t.requestNumber)}</span><strong>${escapeHtml(requestNumber)}</strong></div>
       <div class="number"><span>${escapeHtml(t.trackingNumber)}</span><strong>${escapeHtml(trackingNumber)}</strong></div>
     </section>
-    <h2>${escapeHtml(language === "ar" ? "معلومات الإرسال وحالة الطلب" : "Submission and Status")}</h2>
+    <h2>${escapeHtml(language === "ar" ? "Ù…Ø¹Ù„ÙˆÙ…Ø§Øª Ø§Ù„Ø¥Ø±Ø³Ø§Ù„ ÙˆØ­Ø§Ù„Ø© Ø§Ù„Ø·Ù„Ø¨" : "Submission and Status")}</h2>
     <dl>${rows
       .map(([label, text]) => `<div class="item"><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(String(text))}</dd></div>`)
       .join("")}</dl>
@@ -782,6 +806,51 @@ function App() {
     }
   };
 
+  const submitEnergy = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (isEnergySubmitting) return;
+
+    const parsed = energySchema.safeParse(energyForm);
+    const nextErrors: Errors = {};
+    setEnergySubmitError(null);
+    setEnergyRequest(null);
+
+    if (!parsed.success) {
+      for (const issue of parsed.error.issues) {
+        nextErrors[String(issue.path[0])] = issue.message;
+      }
+    }
+
+    if (!energyForm.confirmed) {
+      nextErrors.confirmed = t.fieldRequired;
+    }
+
+    setEnergyErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length > 0) {
+      const firstErrorKey = Object.keys(nextErrors)[0];
+      window.setTimeout(() => {
+        document.getElementById(`energy-${firstErrorKey}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 0);
+      return;
+    }
+
+    try {
+      setIsEnergySubmitting(true);
+      const result = await submitEnergyRequest(energyForm, agentCode);
+      setEnergyRequest(result);
+      setEnergyForm(initialEnergyForm);
+      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : getSubmitErrorMessage(error);
+      setEnergySubmitError(message || getSubmitErrorMessage(error));
+      window.setTimeout(() => {
+        document.getElementById("energy-submit-error")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 0);
+    } finally {
+      setIsEnergySubmitting(false);
+    }
+  };
   const submitTravel = async (event: React.FormEvent) => {
     event.preventDefault();
     if (isTravelSubmitting) return;
@@ -893,39 +962,43 @@ function App() {
     : "";
   const trackingTheme = trackingLookup ? trackingStatusTheme[trackingLookup.status] : trackingStatusTheme.RECEIVED;
   const trackingThemeStyle = { "--status-accent": trackingTheme.color } as CSSProperties;
-  const trackingDialogTitle = language === "ar" ? "تفاصيل تتبع الطلب" : "Application Tracking Details";
+  const trackingDialogTitle = language === "ar" ? "ØªÙØ§ØµÙŠÙ„ ØªØªØ¨Ø¹ Ø§Ù„Ø·Ù„Ø¨" : "Application Tracking Details";
   const trackingDialogSubtitle =
     language === "ar"
-      ? "ملخص الحالة الحالية وآخر تفاصيل الطلب المسجلة في النظام."
+      ? "Ù…Ù„Ø®Øµ Ø§Ù„Ø­Ø§Ù„Ø© Ø§Ù„Ø­Ø§Ù„ÙŠØ© ÙˆØ¢Ø®Ø± ØªÙØ§ØµÙŠÙ„ Ø§Ù„Ø·Ù„Ø¨ Ø§Ù„Ù…Ø³Ø¬Ù„Ø© ÙÙŠ Ø§Ù„Ù†Ø¸Ø§Ù…."
       : "A summary of the current status and the latest request details in the system.";
-  const closeTrackingLabel = language === "ar" ? "إغلاق" : "Close";
+  const closeTrackingLabel = language === "ar" ? "Ø¥ØºÙ„Ø§Ù‚" : "Close";
   const trackingSubjectLabel =
     trackingLookup?.requestType === "engineering"
       ? language === "ar"
-        ? "المشروع"
+        ? "Ø§Ù„Ù…Ø´Ø±ÙˆØ¹"
         : "Project"
       : trackingLookup?.requestType === "health"
         ? language === "ar"
-          ? "الخطة الصحية"
+          ? "Ø§Ù„Ø®Ø·Ø© Ø§Ù„ØµØ­ÙŠØ©"
           : "Health plan"
       : trackingLookup?.requestType === "fireTheft"
         ? language === "ar"
-          ? "العقار"
+          ? "Ø§Ù„Ø¹Ù‚Ø§Ø±"
           : "Property"
       : trackingLookup?.requestType === "generalAccident"
         ? language === "ar"
-          ? "المؤمن له"
+          ? "Ø§Ù„Ù…Ø¤Ù…Ù† Ù„Ù‡"
           : "Insured"
+      : trackingLookup?.requestType === "energy"
+        ? language === "ar"
+          ? "مشروع الطاقة"
+          : "Energy project"
       : trackingLookup?.requestType === "travel"
         ? language === "ar"
-          ? "الوجهة"
+          ? "Ø§Ù„ÙˆØ¬Ù‡Ø©"
           : "Destination"
       : trackingLookup?.requestType === "transport"
         ? language === "ar"
-          ? "الشحنة"
+          ? "Ø§Ù„Ø´Ø­Ù†Ø©"
           : "Cargo"
       : t.vehicle;
-  const trackingSubjectValue = trackingLookup?.subject ?? trackingLookup?.vehicle ?? trackingLookup?.health?.planType ?? trackingLookup?.property?.type ?? trackingLookup?.accident?.insuredName ?? trackingLookup?.travel?.destinationCountry ?? trackingLookup?.transport?.cargoDescription ?? "-";
+  const trackingSubjectValue = trackingLookup?.subject ?? trackingLookup?.vehicle ?? trackingLookup?.health?.planType ?? trackingLookup?.property?.type ?? trackingLookup?.accident?.insuredName ?? trackingLookup?.travel?.destinationCountry ?? trackingLookup?.transport?.cargoDescription ?? trackingLookup?.energy?.projectName ?? "-";
 
   return (
     <div className={`${darkMode ? "app dark" : "app"} ${isFormLocked ? "app-busy" : ""}`} dir={direction} lang={language}>
@@ -944,14 +1017,14 @@ function App() {
               <span>{uploadProgress.percent}%</span>
             </div>
             <div className="upload-overlay-copy">
-              <strong>{uploadProgress.phase === "submitting" ? "تم رفع الملفات بنجاح..." : "Uploading your files..."}</strong>
-              <span>{uploadProgress.phase === "submitting" ? "جاري إرسال الطلب..." : `Uploading file ${uploadProgress.currentFile} of ${uploadProgress.totalFiles}...`}</span>
+              <strong>{uploadProgress.phase === "submitting" ? "ØªÙ… Ø±ÙØ¹ Ø§Ù„Ù…Ù„ÙØ§Øª Ø¨Ù†Ø¬Ø§Ø­..." : "Uploading your files..."}</strong>
+              <span>{uploadProgress.phase === "submitting" ? "Ø¬Ø§Ø±ÙŠ Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„Ø·Ù„Ø¨..." : `Uploading file ${uploadProgress.currentFile} of ${uploadProgress.totalFiles}...`}</span>
               <p>
-                يرجى الانتظار...
+                ÙŠØ±Ø¬Ù‰ Ø§Ù„Ø§Ù†ØªØ¸Ø§Ø±...
                 <br />
-                يتم الآن رفع الملفات بشكل آمن.
+                ÙŠØªÙ… Ø§Ù„Ø¢Ù† Ø±ÙØ¹ Ø§Ù„Ù…Ù„ÙØ§Øª Ø¨Ø´ÙƒÙ„ Ø¢Ù…Ù†.
               </p>
-              <p>لا تغلق الصفحة ولا تقم بتحديثها حتى يكتمل رفع الطلب.</p>
+              <p>Ù„Ø§ ØªØºÙ„Ù‚ Ø§Ù„ØµÙØ­Ø© ÙˆÙ„Ø§ ØªÙ‚Ù… Ø¨ØªØ­Ø¯ÙŠØ«Ù‡Ø§ Ø­ØªÙ‰ ÙŠÙƒØªÙ…Ù„ Ø±ÙØ¹ Ø§Ù„Ø·Ù„Ø¨.</p>
             </div>
             <div className="upload-progress-bar" aria-hidden="true">
               <span style={{ width: `${uploadProgress.percent}%` }} />
@@ -964,42 +1037,46 @@ function App() {
           <img src="/brand/iraq-takaful-logo.png" alt={t.brand} />
           <span>{t.portal}</span>
         </a>
-        <nav className="header-actions" aria-label="روابط الصفحات">
+        <nav className="header-actions" aria-label="Ø±ÙˆØ§Ø¨Ø· Ø§Ù„ØµÙØ­Ø§Øª">
           <a className={navClass("home")} href="/" onClick={navigate("home")}>
             <Home size={18} aria-hidden="true" />
-            الرئيسية
+            Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠØ©
           </a>
           <a className={navClass("motor")} href="/motor" onClick={navigate("motor")}>
             <CarFront size={18} aria-hidden="true" />
-            طلب مركبات
+            Ø·Ù„Ø¨ Ù…Ø±ÙƒØ¨Ø§Øª
           </a>
           <a className={navClass("engineering")} href="/engineering" onClick={navigate("engineering")}>
             <Building2 size={18} aria-hidden="true" />
-            تأمين هندسي
+            ØªØ£Ù…ÙŠÙ† Ù‡Ù†Ø¯Ø³ÙŠ
           </a>
           <a className={navClass("health")} href="/health" onClick={navigate("health")}>
             <HeartPulse size={18} aria-hidden="true" />
-            تأمين صحي
+            ØªØ£Ù…ÙŠÙ† ØµØ­ÙŠ
           </a>
           <a className={navClass("fire-theft")} href="/fire-theft" onClick={navigate("fire-theft")}>
             <Flame size={18} aria-hidden="true" />
-            حريق وسرقة
+            Ø­Ø±ÙŠÙ‚ ÙˆØ³Ø±Ù‚Ø©
           </a>
           <a className={navClass("general-accident")} href="/general-accident" onClick={navigate("general-accident")}>
             <ShieldAlert size={18} aria-hidden="true" />
-            حوادث عامة
+            Ø­ÙˆØ§Ø¯Ø« Ø¹Ø§Ù…Ø©
+          </a>
+          <a className={navClass("energy")} href="/energy" onClick={navigate("energy")}>
+            <Zap size={18} aria-hidden="true" />
+            طلب تأمين طاقة
           </a>
           <a className={navClass("travel")} href="/travel" onClick={navigate("travel")}>
             <Plane size={18} aria-hidden="true" />
-            سفر
+            Ø³ÙØ±
           </a>
           <a className={navClass("transport")} href="/transport" onClick={navigate("transport")}>
             <Truck size={18} aria-hidden="true" />
-            نقل
+            Ù†Ù‚Ù„
           </a>
           <a className={navClass("track")} href="/track" onClick={navigate("track")}>
             <MapPinned size={18} aria-hidden="true" />
-            تتبع
+            ØªØªØ¨Ø¹
           </a>
           <a className={navClass("support")} href="/support" onClick={navigate("support")}>
             <Phone size={18} aria-hidden="true" />
@@ -1048,34 +1125,38 @@ function App() {
               {t.brand}
             </span>
             <h1>{t.portal}</h1>
-            <p>قدّم طلب تأمين المركبات أو التأمين الهندسي، تابع حالة طلبك، وتواصل مع فريق الدعم من مكان واحد.</p>
+            <p>Ù‚Ø¯Ù‘Ù… Ø·Ù„Ø¨ ØªØ£Ù…ÙŠÙ† Ø§Ù„Ù…Ø±ÙƒØ¨Ø§Øª Ø£Ùˆ Ø§Ù„ØªØ£Ù…ÙŠÙ† Ø§Ù„Ù‡Ù†Ø¯Ø³ÙŠØŒ ØªØ§Ø¨Ø¹ Ø­Ø§Ù„Ø© Ø·Ù„Ø¨ÙƒØŒ ÙˆØªÙˆØ§ØµÙ„ Ù…Ø¹ ÙØ±ÙŠÙ‚ Ø§Ù„Ø¯Ø¹Ù… Ù…Ù† Ù…ÙƒØ§Ù† ÙˆØ§Ø­Ø¯.</p>
             <a className="primary-link" href="/motor" onClick={navigate("motor")}>
               <CarFront size={20} aria-hidden="true" />
-              طلب تأمين مركبات
+              Ø·Ù„Ø¨ ØªØ£Ù…ÙŠÙ† Ù…Ø±ÙƒØ¨Ø§Øª
             </a>
             <a className="ghost-link" href="/engineering" onClick={navigate("engineering")}>
               <Building2 size={20} aria-hidden="true" />
-              طلب تأمين هندسي
+              Ø·Ù„Ø¨ ØªØ£Ù…ÙŠÙ† Ù‡Ù†Ø¯Ø³ÙŠ
             </a>
             <a className="ghost-link" href="/health" onClick={navigate("health")}>
               <HeartPulse size={20} aria-hidden="true" />
-              طلب تأمين صحي
+              Ø·Ù„Ø¨ ØªØ£Ù…ÙŠÙ† ØµØ­ÙŠ
             </a>
             <a className="ghost-link" href="/fire-theft" onClick={navigate("fire-theft")}>
               <Flame size={20} aria-hidden="true" />
-              طلب تأمين حريق وسرقة
+              Ø·Ù„Ø¨ ØªØ£Ù…ÙŠÙ† Ø­Ø±ÙŠÙ‚ ÙˆØ³Ø±Ù‚Ø©
             </a>
             <a className="ghost-link" href="/general-accident" onClick={navigate("general-accident")}>
               <ShieldAlert size={20} aria-hidden="true" />
-              طلب تأمين حوادث عامة
+              Ø·Ù„Ø¨ ØªØ£Ù…ÙŠÙ† Ø­ÙˆØ§Ø¯Ø« Ø¹Ø§Ù…Ø©
+            </a>
+            <a className="ghost-link" href="/energy" onClick={navigate("energy")}>
+              <Zap size={20} aria-hidden="true" />
+              طلب تأمين طاقة
             </a>
             <a className="ghost-link" href="/travel" onClick={navigate("travel")}>
               <Plane size={20} aria-hidden="true" />
-              طلب تأمين سفر
+              Ø·Ù„Ø¨ ØªØ£Ù…ÙŠÙ† Ø³ÙØ±
             </a>
             <a className="ghost-link" href="/transport" onClick={navigate("transport")}>
               <Truck size={20} aria-hidden="true" />
-              طلب تأمين نقل
+              Ø·Ù„Ø¨ ØªØ£Ù…ÙŠÙ† Ù†Ù‚Ù„
             </a>
             <a className="ghost-link" href="/track" onClick={navigate("track")}>
               <MapPinned size={20} aria-hidden="true" />
@@ -1110,60 +1191,66 @@ function App() {
           </motion.div>
         </section>
 
-        <section className="home-actions" aria-label="خدمات بوابة التأمين">
+        <section className="home-actions" aria-label="Ø®Ø¯Ù…Ø§Øª Ø¨ÙˆØ§Ø¨Ø© Ø§Ù„ØªØ£Ù…ÙŠÙ†">
           <article>
             <span><CarFront size={22} aria-hidden="true" /></span>
-            <h2>تأمين المركبات</h2>
-            <p>املأ بيانات العميل والمركبة وارفع الصور والمستندات المطلوبة لإرسال الطلب إلى النظام.</p>
-            <a href="/motor" onClick={navigate("motor")}>ابدأ الطلب</a>
+            <h2>ØªØ£Ù…ÙŠÙ† Ø§Ù„Ù…Ø±ÙƒØ¨Ø§Øª</h2>
+            <p>Ø§Ù…Ù„Ø£ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø¹Ù…ÙŠÙ„ ÙˆØ§Ù„Ù…Ø±ÙƒØ¨Ø© ÙˆØ§Ø±ÙØ¹ Ø§Ù„ØµÙˆØ± ÙˆØ§Ù„Ù…Ø³ØªÙ†Ø¯Ø§Øª Ø§Ù„Ù…Ø·Ù„ÙˆØ¨Ø© Ù„Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„Ø·Ù„Ø¨ Ø¥Ù„Ù‰ Ø§Ù„Ù†Ø¸Ø§Ù….</p>
+            <a href="/motor" onClick={navigate("motor")}>Ø§Ø¨Ø¯Ø£ Ø§Ù„Ø·Ù„Ø¨</a>
           </article>
           <article>
             <span><Building2 size={22} aria-hidden="true" /></span>
-            <h2>التأمين الهندسي</h2>
-            <p>قدّم تفاصيل المشروع وقيمة العقد ونوع التغطية ليتم تسجيل طلب هندسي جديد.</p>
-            <a href="/engineering" onClick={navigate("engineering")}>فتح الفورمة</a>
+            <h2>Ø§Ù„ØªØ£Ù…ÙŠÙ† Ø§Ù„Ù‡Ù†Ø¯Ø³ÙŠ</h2>
+            <p>Ù‚Ø¯Ù‘Ù… ØªÙØ§ØµÙŠÙ„ Ø§Ù„Ù…Ø´Ø±ÙˆØ¹ ÙˆÙ‚ÙŠÙ…Ø© Ø§Ù„Ø¹Ù‚Ø¯ ÙˆÙ†ÙˆØ¹ Ø§Ù„ØªØºØ·ÙŠØ© Ù„ÙŠØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø·Ù„Ø¨ Ù‡Ù†Ø¯Ø³ÙŠ Ø¬Ø¯ÙŠØ¯.</p>
+            <a href="/engineering" onClick={navigate("engineering")}>ÙØªØ­ Ø§Ù„ÙÙˆØ±Ù…Ø©</a>
           </article>
           <article>
             <span><HeartPulse size={22} aria-hidden="true" /></span>
-            <h2>التأمين الصحي</h2>
-            <p>قدّم بيانات العميل وخطة التغطية وعدد المؤمنين والحالة الصحية لإرسال طلب صحي جديد إلى النظام.</p>
-            <a href="/health" onClick={navigate("health")}>فتح الفورمة</a>
+            <h2>Ø§Ù„ØªØ£Ù…ÙŠÙ† Ø§Ù„ØµØ­ÙŠ</h2>
+            <p>Ù‚Ø¯Ù‘Ù… Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø¹Ù…ÙŠÙ„ ÙˆØ®Ø·Ø© Ø§Ù„ØªØºØ·ÙŠØ© ÙˆØ¹Ø¯Ø¯ Ø§Ù„Ù…Ø¤Ù…Ù†ÙŠÙ† ÙˆØ§Ù„Ø­Ø§Ù„Ø© Ø§Ù„ØµØ­ÙŠØ© Ù„Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨ ØµØ­ÙŠ Ø¬Ø¯ÙŠØ¯ Ø¥Ù„Ù‰ Ø§Ù„Ù†Ø¸Ø§Ù….</p>
+            <a href="/health" onClick={navigate("health")}>ÙØªØ­ Ø§Ù„ÙÙˆØ±Ù…Ø©</a>
           </article>
           <article>
             <span><Flame size={22} aria-hidden="true" /></span>
-            <h2>تأمين الحريق والسرقة</h2>
-            <p>سجّل بيانات العقار وقيمة المبنى والمحتويات وأنظمة السلامة لإرسال طلب تأمين جديد.</p>
-            <a href="/fire-theft" onClick={navigate("fire-theft")}>فتح الفورمة</a>
+            <h2>ØªØ£Ù…ÙŠÙ† Ø§Ù„Ø­Ø±ÙŠÙ‚ ÙˆØ§Ù„Ø³Ø±Ù‚Ø©</h2>
+            <p>Ø³Ø¬Ù‘Ù„ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø¹Ù‚Ø§Ø± ÙˆÙ‚ÙŠÙ…Ø© Ø§Ù„Ù…Ø¨Ù†Ù‰ ÙˆØ§Ù„Ù…Ø­ØªÙˆÙŠØ§Øª ÙˆØ£Ù†Ø¸Ù…Ø© Ø§Ù„Ø³Ù„Ø§Ù…Ø© Ù„Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨ ØªØ£Ù…ÙŠÙ† Ø¬Ø¯ÙŠØ¯.</p>
+            <a href="/fire-theft" onClick={navigate("fire-theft")}>ÙØªØ­ Ø§Ù„ÙÙˆØ±Ù…Ø©</a>
           </article>
           <article>
             <span><ShieldAlert size={22} aria-hidden="true" /></span>
-            <h2>تأمين الحوادث العامة</h2>
-            <p>سجّل نشاط العمل وموقع الخطر وحدود التغطية لإرسال طلب حوادث عامة ومسؤولية طرف ثالث.</p>
-            <a href="/general-accident" onClick={navigate("general-accident")}>فتح الفورمة</a>
+            <h2>ØªØ£Ù…ÙŠÙ† Ø§Ù„Ø­ÙˆØ§Ø¯Ø« Ø§Ù„Ø¹Ø§Ù…Ø©</h2>
+            <p>Ø³Ø¬Ù‘Ù„ Ù†Ø´Ø§Ø· Ø§Ù„Ø¹Ù…Ù„ ÙˆÙ…ÙˆÙ‚Ø¹ Ø§Ù„Ø®Ø·Ø± ÙˆØ­Ø¯ÙˆØ¯ Ø§Ù„ØªØºØ·ÙŠØ© Ù„Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨ Ø­ÙˆØ§Ø¯Ø« Ø¹Ø§Ù…Ø© ÙˆÙ…Ø³Ø¤ÙˆÙ„ÙŠØ© Ø·Ø±Ù Ø«Ø§Ù„Ø«.</p>
+            <a href="/general-accident" onClick={navigate("general-accident")}>ÙØªØ­ Ø§Ù„ÙÙˆØ±Ù…Ø©</a>
+          </article>
+          <article>
+            <span><Zap size={22} aria-hidden="true" /></span>
+            <h2>تأمين الطاقة</h2>
+            <p>سجّل بيانات مشروع الطاقة ونوع المنشأة وقيم الأصول وحدود التغطية لإرسال طلب تأمين طاقة جديد.</p>
+            <a href="/energy" onClick={navigate("energy")}>فتح الفورمة</a>
           </article>
           <article>
             <span><Plane size={22} aria-hidden="true" /></span>
-            <h2>تأمين السفر</h2>
-            <p>سجّل بيانات المسافر والوجهة وتواريخ الرحلة ونوع التغطية لإرسال طلب تأمين سفر.</p>
-            <a href="/travel" onClick={navigate("travel")}>فتح الفورمة</a>
+            <h2>ØªØ£Ù…ÙŠÙ† Ø§Ù„Ø³ÙØ±</h2>
+            <p>Ø³Ø¬Ù‘Ù„ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ù…Ø³Ø§ÙØ± ÙˆØ§Ù„ÙˆØ¬Ù‡Ø© ÙˆØªÙˆØ§Ø±ÙŠØ® Ø§Ù„Ø±Ø­Ù„Ø© ÙˆÙ†ÙˆØ¹ Ø§Ù„ØªØºØ·ÙŠØ© Ù„Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨ ØªØ£Ù…ÙŠÙ† Ø³ÙØ±.</p>
+            <a href="/travel" onClick={navigate("travel")}>ÙØªØ­ Ø§Ù„ÙÙˆØ±Ù…Ø©</a>
           </article>
           <article>
             <span><Truck size={22} aria-hidden="true" /></span>
-            <h2>تأمين النقل</h2>
-            <p>سجل بيانات الشحنة ومسار النقل وقيمة البضاعة ونطاق التغطية لإرسال طلب تأمين نقل جديد.</p>
-            <a href="/transport" onClick={navigate("transport")}>فتح الفورمة</a>
+            <h2>ØªØ£Ù…ÙŠÙ† Ø§Ù„Ù†Ù‚Ù„</h2>
+            <p>Ø³Ø¬Ù„ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø´Ø­Ù†Ø© ÙˆÙ…Ø³Ø§Ø± Ø§Ù„Ù†Ù‚Ù„ ÙˆÙ‚ÙŠÙ…Ø© Ø§Ù„Ø¨Ø¶Ø§Ø¹Ø© ÙˆÙ†Ø·Ø§Ù‚ Ø§Ù„ØªØºØ·ÙŠØ© Ù„Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨ ØªØ£Ù…ÙŠÙ† Ù†Ù‚Ù„ Ø¬Ø¯ÙŠØ¯.</p>
+            <a href="/transport" onClick={navigate("transport")}>ÙØªØ­ Ø§Ù„ÙÙˆØ±Ù…Ø©</a>
           </article>
           <article>
             <span><MapPinned size={22} aria-hidden="true" /></span>
-            <h2>تتبع الطلب</h2>
-            <p>استخدم رقم التتبع لمعرفة مرحلة معالجة الطلب وآخر تحديث مسجل.</p>
-            <a href="/track" onClick={navigate("track")}>تتبع الآن</a>
+            <h2>ØªØªØ¨Ø¹ Ø§Ù„Ø·Ù„Ø¨</h2>
+            <p>Ø§Ø³ØªØ®Ø¯Ù… Ø±Ù‚Ù… Ø§Ù„ØªØªØ¨Ø¹ Ù„Ù…Ø¹Ø±ÙØ© Ù…Ø±Ø­Ù„Ø© Ù…Ø¹Ø§Ù„Ø¬Ø© Ø§Ù„Ø·Ù„Ø¨ ÙˆØ¢Ø®Ø± ØªØ­Ø¯ÙŠØ« Ù…Ø³Ø¬Ù„.</p>
+            <a href="/track" onClick={navigate("track")}>ØªØªØ¨Ø¹ Ø§Ù„Ø¢Ù†</a>
           </article>
           <article>
             <span><Phone size={22} aria-hidden="true" /></span>
-            <h2>الدعم</h2>
-            <p>تواصل مع فريق عراق تكافل عبر الهاتف أو واتساب أو البريد الإلكتروني.</p>
-            <a href="/support" onClick={navigate("support")}>معلومات الدعم</a>
+            <h2>Ø§Ù„Ø¯Ø¹Ù…</h2>
+            <p>ØªÙˆØ§ØµÙ„ Ù…Ø¹ ÙØ±ÙŠÙ‚ Ø¹Ø±Ø§Ù‚ ØªÙƒØ§ÙÙ„ Ø¹Ø¨Ø± Ø§Ù„Ù‡Ø§ØªÙ Ø£Ùˆ ÙˆØ§ØªØ³Ø§Ø¨ Ø£Ùˆ Ø§Ù„Ø¨Ø±ÙŠØ¯ Ø§Ù„Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ.</p>
+            <a href="/support" onClick={navigate("support")}>Ù…Ø¹Ù„ÙˆÙ…Ø§Øª Ø§Ù„Ø¯Ø¹Ù…</a>
           </article>
         </section>
           </>
@@ -1277,91 +1364,109 @@ function App() {
                   </div>
                   {trackingLookup.requestType === "engineering" && trackingLookup.project?.type ? (
                     <div>
-                      <dt>{language === "ar" ? "نوع المشروع" : "Project type"}</dt>
+                      <dt>{language === "ar" ? "Ù†ÙˆØ¹ Ø§Ù„Ù…Ø´Ø±ÙˆØ¹" : "Project type"}</dt>
                       <dd>{trackingLookup.project.type}</dd>
                     </div>
                   ) : null}
                   {trackingLookup.requestType === "engineering" && trackingLookup.project?.insuranceType ? (
                     <div>
-                      <dt>{language === "ar" ? "نوع التأمين" : "Insurance type"}</dt>
+                      <dt>{language === "ar" ? "Ù†ÙˆØ¹ Ø§Ù„ØªØ£Ù…ÙŠÙ†" : "Insurance type"}</dt>
                       <dd>{trackingLookup.project.insuranceType}</dd>
                     </div>
                   ) : null}
                   {trackingLookup.requestType === "engineering" && trackingLookup.project?.location ? (
                     <div>
-                      <dt>{language === "ar" ? "موقع المشروع" : "Project location"}</dt>
+                      <dt>{language === "ar" ? "Ù…ÙˆÙ‚Ø¹ Ø§Ù„Ù…Ø´Ø±ÙˆØ¹" : "Project location"}</dt>
                       <dd>{trackingLookup.project.location}</dd>
                     </div>
                   ) : null}
                   {trackingLookup.requestType === "health" && trackingLookup.health?.coverageScope ? (
                     <div>
-                      <dt>{language === "ar" ? "نطاق التغطية" : "Coverage scope"}</dt>
+                      <dt>{language === "ar" ? "Ù†Ø·Ø§Ù‚ Ø§Ù„ØªØºØ·ÙŠØ©" : "Coverage scope"}</dt>
                       <dd>{trackingLookup.health.coverageScope}</dd>
                     </div>
                   ) : null}
                   {trackingLookup.requestType === "health" && trackingLookup.health?.insuredMembersCount ? (
                     <div>
-                      <dt>{language === "ar" ? "عدد المؤمنين" : "Insured members"}</dt>
+                      <dt>{language === "ar" ? "Ø¹Ø¯Ø¯ Ø§Ù„Ù…Ø¤Ù…Ù†ÙŠÙ†" : "Insured members"}</dt>
                       <dd>{trackingLookup.health.insuredMembersCount}</dd>
                     </div>
                   ) : null}
                   {trackingLookup.requestType === "fireTheft" && trackingLookup.property?.address ? (
                     <div>
-                      <dt>{language === "ar" ? "عنوان العقار" : "Property address"}</dt>
+                      <dt>{language === "ar" ? "Ø¹Ù†ÙˆØ§Ù† Ø§Ù„Ø¹Ù‚Ø§Ø±" : "Property address"}</dt>
                       <dd>{trackingLookup.property.address}</dd>
                     </div>
                   ) : null}
                   {trackingLookup.requestType === "fireTheft" && trackingLookup.property?.totalSumInsured ? (
                     <div>
-                      <dt>{language === "ar" ? "مبلغ التأمين" : "Sum insured"}</dt>
+                      <dt>{language === "ar" ? "Ù…Ø¨Ù„Øº Ø§Ù„ØªØ£Ù…ÙŠÙ†" : "Sum insured"}</dt>
                       <dd>{`${trackingLookup.property.totalSumInsured} ${trackingLookup.property.currency ?? ""}`.trim()}</dd>
                     </div>
                   ) : null}
                   {trackingLookup.requestType === "generalAccident" && trackingLookup.accident?.accidentType ? (
                     <div>
-                      <dt>{language === "ar" ? "نوع الحادث" : "Accident type"}</dt>
+                      <dt>{language === "ar" ? "Ù†ÙˆØ¹ Ø§Ù„Ø­Ø§Ø¯Ø«" : "Accident type"}</dt>
                       <dd>{trackingLookup.accident.accidentType}</dd>
                     </div>
                   ) : null}
                   {trackingLookup.requestType === "generalAccident" && trackingLookup.accident?.riskLocation ? (
                     <div>
-                      <dt>{language === "ar" ? "موقع الخطر" : "Risk location"}</dt>
+                      <dt>{language === "ar" ? "Ù…ÙˆÙ‚Ø¹ Ø§Ù„Ø®Ø·Ø±" : "Risk location"}</dt>
                       <dd>{trackingLookup.accident.riskLocation}</dd>
                     </div>
                   ) : null}
                   {trackingLookup.requestType === "generalAccident" && trackingLookup.accident?.coverageLimit ? (
                     <div>
-                      <dt>{language === "ar" ? "حد التغطية" : "Coverage limit"}</dt>
+                      <dt>{language === "ar" ? "Ø­Ø¯ Ø§Ù„ØªØºØ·ÙŠØ©" : "Coverage limit"}</dt>
                       <dd>{`${trackingLookup.accident.coverageLimit} ${trackingLookup.accident.currency ?? ""}`.trim()}</dd>
                     </div>
                   ) : null}
+                  {trackingLookup.requestType === "energy" && trackingLookup.energy?.energyType ? (
+                    <>
+                      <dt>نوع الطاقة</dt>
+                      <dd>{trackingLookup.energy.energyType}</dd>
+                    </>
+                  ) : null}
+                  {trackingLookup.requestType === "energy" && trackingLookup.energy?.facilityType ? (
+                    <>
+                      <dt>نوع المنشأة</dt>
+                      <dd>{trackingLookup.energy.facilityType}</dd>
+                    </>
+                  ) : null}
+                  {trackingLookup.requestType === "energy" && trackingLookup.energy?.totalSumInsured ? (
+                    <>
+                      <dt>مبلغ التأمين</dt>
+                      <dd>{`${trackingLookup.energy.totalSumInsured} ${trackingLookup.energy.currency ?? ""}`.trim()}</dd>
+                    </>
+                  ) : null}
                   {trackingLookup.requestType === "travel" && trackingLookup.travel?.coverageType ? (
                     <div>
-                      <dt>{language === "ar" ? "نوع التغطية" : "Coverage type"}</dt>
+                      <dt>{language === "ar" ? "Ù†ÙˆØ¹ Ø§Ù„ØªØºØ·ÙŠØ©" : "Coverage type"}</dt>
                       <dd>{trackingLookup.travel.coverageType}</dd>
                     </div>
                   ) : null}
                   {trackingLookup.requestType === "travel" && trackingLookup.travel?.travelersCount ? (
                     <div>
-                      <dt>{language === "ar" ? "عدد المسافرين" : "Travelers"}</dt>
+                      <dt>{language === "ar" ? "Ø¹Ø¯Ø¯ Ø§Ù„Ù…Ø³Ø§ÙØ±ÙŠÙ†" : "Travelers"}</dt>
                       <dd>{trackingLookup.travel.travelersCount}</dd>
                     </div>
                   ) : null}
                   {trackingLookup.requestType === "transport" && trackingLookup.transport?.transportMode ? (
                     <div>
-                      <dt>{language === "ar" ? "نوع النقل" : "Transport mode"}</dt>
+                      <dt>{language === "ar" ? "Ù†ÙˆØ¹ Ø§Ù„Ù†Ù‚Ù„" : "Transport mode"}</dt>
                       <dd>{trackingLookup.transport.transportMode}</dd>
                     </div>
                   ) : null}
                   {trackingLookup.requestType === "transport" && trackingLookup.transport?.cargoValue ? (
                     <div>
-                      <dt>{language === "ar" ? "قيمة الشحنة" : "Cargo value"}</dt>
+                      <dt>{language === "ar" ? "Ù‚ÙŠÙ…Ø© Ø§Ù„Ø´Ø­Ù†Ø©" : "Cargo value"}</dt>
                       <dd>{`${trackingLookup.transport.cargoValue} ${trackingLookup.transport.currency ?? ""}`.trim()}</dd>
                     </div>
                   ) : null}
                   {trackingLookup.requestType === "transport" && (trackingLookup.transport?.originCity || trackingLookup.transport?.destinationCity) ? (
                     <div>
-                      <dt>{language === "ar" ? "المسار" : "Route"}</dt>
+                      <dt>{language === "ar" ? "Ø§Ù„Ù…Ø³Ø§Ø±" : "Route"}</dt>
                       <dd>{[trackingLookup.transport.originCity, trackingLookup.transport.destinationCity].filter(Boolean).join(" - ")}</dd>
                     </div>
                   ) : null}
@@ -1403,10 +1508,10 @@ function App() {
               <div>
                 <span className="eyebrow">
                   <Building2 size={18} aria-hidden="true" />
-                  تأمين المشاريع الهندسية
+                  ØªØ£Ù…ÙŠÙ† Ø§Ù„Ù…Ø´Ø§Ø±ÙŠØ¹ Ø§Ù„Ù‡Ù†Ø¯Ø³ÙŠØ©
                 </span>
-                <h1>طلب تأمين هندسي</h1>
-                <p>أدخل بيانات العميل والمشروع حتى يتم إرسال الطلب مباشرة إلى نظام TRINSU.</p>
+                <h1>Ø·Ù„Ø¨ ØªØ£Ù…ÙŠÙ† Ù‡Ù†Ø¯Ø³ÙŠ</h1>
+                <p>Ø£Ø¯Ø®Ù„ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø¹Ù…ÙŠÙ„ ÙˆØ§Ù„Ù…Ø´Ø±ÙˆØ¹ Ø­ØªÙ‰ ÙŠØªÙ… Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„Ø·Ù„Ø¨ Ù…Ø¨Ø§Ø´Ø±Ø© Ø¥Ù„Ù‰ Ù†Ø¸Ø§Ù… TRINSU.</p>
               </div>
               <div className="engineering-metrics" aria-hidden="true">
                 <span>CAR</span>
@@ -1418,82 +1523,82 @@ function App() {
             <form id="engineering-request-form" className="request-form" onSubmit={submitEngineering} noValidate>
               <fieldset className="form-fieldset" disabled={isEngineeringSubmitting}>
                 <motion.section className="panel" {...sectionAnimation}>
-                  <h2>معلومات العميل</h2>
+                  <h2>Ù…Ø¹Ù„ÙˆÙ…Ø§Øª Ø§Ù„Ø¹Ù…ÙŠÙ„</h2>
                   <div className="grid two">
-                    <FloatingField id="eng-fullName" label="الاسم الكامل" value={engineeringForm.fullName} error={engineeringErrors.fullName} required onChange={setEngineeringValue("fullName")} />
-                    <FloatingField id="eng-mobile" label="رقم الموبايل" value={engineeringForm.mobile} error={engineeringErrors.mobile} required inputMode="tel" onChange={setEngineeringValue("mobile")} />
-                    <FloatingField id="eng-email" label="البريد الإلكتروني" value={engineeringForm.email} error={engineeringErrors.email} type="email" onChange={setEngineeringValue("email")} />
-                    <FloatingField id="eng-nationalId" label="الرقم الوطني" value={engineeringForm.nationalId} error={engineeringErrors.nationalId} onChange={setEngineeringValue("nationalId")} />
-                    <FloatingField id="eng-city" label="المدينة" value={engineeringForm.city} error={engineeringErrors.city} onChange={setEngineeringValue("city")} />
-                    <FloatingField id="eng-address" label="العنوان" value={engineeringForm.address} error={engineeringErrors.address} onChange={setEngineeringValue("address")} />
+                    <FloatingField id="eng-fullName" label="Ø§Ù„Ø§Ø³Ù… Ø§Ù„ÙƒØ§Ù…Ù„" value={engineeringForm.fullName} error={engineeringErrors.fullName} required onChange={setEngineeringValue("fullName")} />
+                    <FloatingField id="eng-mobile" label="Ø±Ù‚Ù… Ø§Ù„Ù…ÙˆØ¨Ø§ÙŠÙ„" value={engineeringForm.mobile} error={engineeringErrors.mobile} required inputMode="tel" onChange={setEngineeringValue("mobile")} />
+                    <FloatingField id="eng-email" label="Ø§Ù„Ø¨Ø±ÙŠØ¯ Ø§Ù„Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ" value={engineeringForm.email} error={engineeringErrors.email} type="email" onChange={setEngineeringValue("email")} />
+                    <FloatingField id="eng-nationalId" label="Ø§Ù„Ø±Ù‚Ù… Ø§Ù„ÙˆØ·Ù†ÙŠ" value={engineeringForm.nationalId} error={engineeringErrors.nationalId} onChange={setEngineeringValue("nationalId")} />
+                    <FloatingField id="eng-city" label="Ø§Ù„Ù…Ø¯ÙŠÙ†Ø©" value={engineeringForm.city} error={engineeringErrors.city} onChange={setEngineeringValue("city")} />
+                    <FloatingField id="eng-address" label="Ø§Ù„Ø¹Ù†ÙˆØ§Ù†" value={engineeringForm.address} error={engineeringErrors.address} onChange={setEngineeringValue("address")} />
                   </div>
                 </motion.section>
 
                 <motion.section className="panel" {...sectionAnimation}>
-                  <h2>معلومات المشروع</h2>
+                  <h2>Ù…Ø¹Ù„ÙˆÙ…Ø§Øª Ø§Ù„Ù…Ø´Ø±ÙˆØ¹</h2>
                   <div className="grid three">
-                    <FloatingField id="eng-projectName" label="اسم المشروع" value={engineeringForm.projectName} error={engineeringErrors.projectName} required onChange={setEngineeringValue("projectName")} />
-                    <FloatingField id="eng-projectType" label="نوع المشروع" value={engineeringForm.projectType} error={engineeringErrors.projectType} required onChange={setEngineeringValue("projectType")} />
-                    <FloatingField id="eng-projectLocation" label="موقع المشروع" value={engineeringForm.projectLocation} error={engineeringErrors.projectLocation} required onChange={setEngineeringValue("projectLocation")} />
-                    <FloatingField id="eng-contractValue" label="قيمة العقد" value={engineeringForm.contractValue} error={engineeringErrors.contractValue} required inputMode="decimal" onChange={setEngineeringValue("contractValue")} />
-                    <FloatingField id="eng-currency" label="العملة" value={engineeringForm.currency} error={engineeringErrors.currency} required onChange={setEngineeringValue("currency")} />
-                    <FloatingField id="eng-insuranceType" label="نوع التأمين" value={engineeringForm.insuranceType} error={engineeringErrors.insuranceType} required onChange={setEngineeringValue("insuranceType")} />
-                    <FloatingField id="eng-startDate" label="تاريخ بداية المشروع" value={engineeringForm.startDate} error={engineeringErrors.startDate} type="date" onChange={setEngineeringValue("startDate")} />
-                    <FloatingField id="eng-endDate" label="تاريخ نهاية المشروع" value={engineeringForm.endDate} error={engineeringErrors.endDate} type="date" onChange={setEngineeringValue("endDate")} />
-                    <FloatingField id="eng-contractorName" label="اسم المقاول" value={engineeringForm.contractorName} error={engineeringErrors.contractorName} onChange={setEngineeringValue("contractorName")} />
-                    <FloatingField id="eng-ownerName" label="اسم مالك المشروع" value={engineeringForm.ownerName} error={engineeringErrors.ownerName} onChange={setEngineeringValue("ownerName")} />
+                    <FloatingField id="eng-projectName" label="Ø§Ø³Ù… Ø§Ù„Ù…Ø´Ø±ÙˆØ¹" value={engineeringForm.projectName} error={engineeringErrors.projectName} required onChange={setEngineeringValue("projectName")} />
+                    <FloatingField id="eng-projectType" label="Ù†ÙˆØ¹ Ø§Ù„Ù…Ø´Ø±ÙˆØ¹" value={engineeringForm.projectType} error={engineeringErrors.projectType} required onChange={setEngineeringValue("projectType")} />
+                    <FloatingField id="eng-projectLocation" label="Ù…ÙˆÙ‚Ø¹ Ø§Ù„Ù…Ø´Ø±ÙˆØ¹" value={engineeringForm.projectLocation} error={engineeringErrors.projectLocation} required onChange={setEngineeringValue("projectLocation")} />
+                    <FloatingField id="eng-contractValue" label="Ù‚ÙŠÙ…Ø© Ø§Ù„Ø¹Ù‚Ø¯" value={engineeringForm.contractValue} error={engineeringErrors.contractValue} required inputMode="decimal" onChange={setEngineeringValue("contractValue")} />
+                    <FloatingField id="eng-currency" label="Ø§Ù„Ø¹Ù…Ù„Ø©" value={engineeringForm.currency} error={engineeringErrors.currency} required onChange={setEngineeringValue("currency")} />
+                    <FloatingField id="eng-insuranceType" label="Ù†ÙˆØ¹ Ø§Ù„ØªØ£Ù…ÙŠÙ†" value={engineeringForm.insuranceType} error={engineeringErrors.insuranceType} required onChange={setEngineeringValue("insuranceType")} />
+                    <FloatingField id="eng-startDate" label="ØªØ§Ø±ÙŠØ® Ø¨Ø¯Ø§ÙŠØ© Ø§Ù„Ù…Ø´Ø±ÙˆØ¹" value={engineeringForm.startDate} error={engineeringErrors.startDate} type="date" onChange={setEngineeringValue("startDate")} />
+                    <FloatingField id="eng-endDate" label="ØªØ§Ø±ÙŠØ® Ù†Ù‡Ø§ÙŠØ© Ø§Ù„Ù…Ø´Ø±ÙˆØ¹" value={engineeringForm.endDate} error={engineeringErrors.endDate} type="date" onChange={setEngineeringValue("endDate")} />
+                    <FloatingField id="eng-contractorName" label="Ø§Ø³Ù… Ø§Ù„Ù…Ù‚Ø§ÙˆÙ„" value={engineeringForm.contractorName} error={engineeringErrors.contractorName} onChange={setEngineeringValue("contractorName")} />
+                    <FloatingField id="eng-ownerName" label="Ø§Ø³Ù… Ù…Ø§Ù„Ùƒ Ø§Ù„Ù…Ø´Ø±ÙˆØ¹" value={engineeringForm.ownerName} error={engineeringErrors.ownerName} onChange={setEngineeringValue("ownerName")} />
                   </div>
                 </motion.section>
 
                 <motion.section className="panel" {...sectionAnimation}>
-                  <h2>تفاصيل إضافية</h2>
+                  <h2>ØªÙØ§ØµÙŠÙ„ Ø¥Ø¶Ø§ÙÙŠØ©</h2>
                   <div className="grid two">
-                    <FloatingField id="eng-riskDetails" label="تفاصيل المخاطر" value={engineeringForm.riskDetails} error={engineeringErrors.riskDetails} multiline rows={6} onChange={setEngineeringValue("riskDetails")} />
-                    <FloatingField id="eng-notes" label="ملاحظات" value={engineeringForm.notes} error={engineeringErrors.notes} multiline rows={6} onChange={setEngineeringValue("notes")} />
+                    <FloatingField id="eng-riskDetails" label="ØªÙØ§ØµÙŠÙ„ Ø§Ù„Ù…Ø®Ø§Ø·Ø±" value={engineeringForm.riskDetails} error={engineeringErrors.riskDetails} multiline rows={6} onChange={setEngineeringValue("riskDetails")} />
+                    <FloatingField id="eng-notes" label="Ù…Ù„Ø§Ø­Ø¸Ø§Øª" value={engineeringForm.notes} error={engineeringErrors.notes} multiline rows={6} onChange={setEngineeringValue("notes")} />
                   </div>
                 </motion.section>
 
                 <motion.section className="panel review-panel" {...sectionAnimation}>
-                  <h2>مراجعة الطلب</h2>
+                  <h2>Ù…Ø±Ø§Ø¬Ø¹Ø© Ø§Ù„Ø·Ù„Ø¨</h2>
                   <div className="review-grid">
-                    <span>العميل</span>
+                    <span>Ø§Ù„Ø¹Ù…ÙŠÙ„</span>
                     <strong>{engineeringForm.fullName || "-"}</strong>
-                    <span>المشروع</span>
+                    <span>Ø§Ù„Ù…Ø´Ø±ÙˆØ¹</span>
                     <strong>{engineeringForm.projectName || "-"}</strong>
-                    <span>نوع التأمين</span>
+                    <span>Ù†ÙˆØ¹ Ø§Ù„ØªØ£Ù…ÙŠÙ†</span>
                     <strong>{engineeringForm.insuranceType || "-"}</strong>
-                    <span>قيمة العقد</span>
+                    <span>Ù‚ÙŠÙ…Ø© Ø§Ù„Ø¹Ù‚Ø¯</span>
                     <strong>{engineeringForm.contractValue ? `${engineeringForm.contractValue} ${engineeringForm.currency}` : "-"}</strong>
                   </div>
                   <label className={`confirm ${engineeringErrors.confirmed ? "field-error" : ""}`}>
                     <input type="checkbox" checked={engineeringForm.confirmed} onChange={setEngineeringValue("confirmed")} />
-                    <span>أؤكد صحة المعلومات وأوافق على إرسال الطلب إلى TRINSU.</span>
+                    <span>Ø£Ø¤ÙƒØ¯ ØµØ­Ø© Ø§Ù„Ù…Ø¹Ù„ÙˆÙ…Ø§Øª ÙˆØ£ÙˆØ§ÙÙ‚ Ø¹Ù„Ù‰ Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„Ø·Ù„Ø¨ Ø¥Ù„Ù‰ TRINSU.</span>
                   </label>
                   {engineeringErrors.confirmed ? <p className="error-text">{engineeringErrors.confirmed}</p> : null}
                   {engineeringSubmitError ? <p className="submit-error" role="alert">{engineeringSubmitError}</p> : null}
                   <button className="submit-button" type="submit" disabled={isEngineeringSubmitting}>
                     {isEngineeringSubmitting ? <span className="spinner" aria-hidden="true" /> : <CheckCircle2 size={20} aria-hidden="true" />}
-                    {isEngineeringSubmitting ? "جاري الإرسال" : "إرسال طلب التأمين"}
+                    {isEngineeringSubmitting ? "Ø¬Ø§Ø±ÙŠ Ø§Ù„Ø¥Ø±Ø³Ø§Ù„" : "Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨ Ø§Ù„ØªØ£Ù…ÙŠÙ†"}
                   </button>
                 </motion.section>
 
                 {engineeringRequest ? (
                   <motion.section className="success-panel" role="status" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
                     <CheckCircle2 size={42} aria-hidden="true" />
-                    <h2>تم إرسال طلب التأمين الهندسي</h2>
-                    <p>تم تسجيل الطلب في نظام TRINSU بنجاح.</p>
+                    <h2>ØªÙ… Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨ Ø§Ù„ØªØ£Ù…ÙŠÙ† Ø§Ù„Ù‡Ù†Ø¯Ø³ÙŠ</h2>
+                    <p>ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø·Ù„Ø¨ ÙÙŠ Ù†Ø¸Ø§Ù… TRINSU Ø¨Ù†Ø¬Ø§Ø­.</p>
                     <div className="success-numbers">
                       <div>
-                        <span>رقم الطلب</span>
+                        <span>Ø±Ù‚Ù… Ø§Ù„Ø·Ù„Ø¨</span>
                         <strong>{engineeringRequest.requestNumber}</strong>
                       </div>
                       <div>
-                        <span>رقم التتبع</span>
+                        <span>Ø±Ù‚Ù… Ø§Ù„ØªØªØ¨Ø¹</span>
                         <strong>{engineeringRequest.trackingNumber}</strong>
                       </div>
                     </div>
                     <div className="success-status">
-                      <span>الحالة</span>
+                      <span>Ø§Ù„Ø­Ø§Ù„Ø©</span>
                       <strong>{engineeringRequest.status}</strong>
                     </div>
                   </motion.section>
@@ -1509,10 +1614,10 @@ function App() {
               <div>
                 <span className="eyebrow">
                   <HeartPulse size={18} aria-hidden="true" />
-                  طلبات التأمين الصحي
+                  Ø·Ù„Ø¨Ø§Øª Ø§Ù„ØªØ£Ù…ÙŠÙ† Ø§Ù„ØµØ­ÙŠ
                 </span>
-                <h1>طلب تأمين صحي</h1>
-                <p>أدخل بيانات العميل وخطة التغطية الصحية ليتم تسجيل الطلب ومتابعته داخل النظام.</p>
+                <h1>Ø·Ù„Ø¨ ØªØ£Ù…ÙŠÙ† ØµØ­ÙŠ</h1>
+                <p>Ø£Ø¯Ø®Ù„ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø¹Ù…ÙŠÙ„ ÙˆØ®Ø·Ø© Ø§Ù„ØªØºØ·ÙŠØ© Ø§Ù„ØµØ­ÙŠØ© Ù„ÙŠØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø·Ù„Ø¨ ÙˆÙ…ØªØ§Ø¨Ø¹ØªÙ‡ Ø¯Ø§Ø®Ù„ Ø§Ù„Ù†Ø¸Ø§Ù….</p>
               </div>
               <div className="engineering-metrics health-metrics" aria-hidden="true">
                 <span>HLT</span>
@@ -1524,93 +1629,93 @@ function App() {
             <form id="health-request-form" className="request-form" onSubmit={submitHealth} noValidate>
               <fieldset className="form-fieldset" disabled={isHealthSubmitting}>
                 <motion.section className="panel" {...sectionAnimation}>
-                  <h2>معلومات العميل</h2>
+                  <h2>Ù…Ø¹Ù„ÙˆÙ…Ø§Øª Ø§Ù„Ø¹Ù…ÙŠÙ„</h2>
                   <div className="grid three">
-                    <FloatingField id="health-fullName" label="الاسم الكامل" value={healthForm.fullName} error={healthErrors.fullName} required onChange={setHealthValue("fullName")} />
-                    <FloatingField id="health-mobile" label="رقم الموبايل" value={healthForm.mobile} error={healthErrors.mobile} required inputMode="tel" onChange={setHealthValue("mobile")} />
-                    <FloatingField id="health-email" label="البريد الإلكتروني" value={healthForm.email} error={healthErrors.email} type="email" onChange={setHealthValue("email")} />
-                    <FloatingField id="health-nationalId" label="الرقم الوطني" value={healthForm.nationalId} error={healthErrors.nationalId} required onChange={setHealthValue("nationalId")} />
-                    <FloatingField id="health-age" label="العمر" value={healthForm.age} error={healthErrors.age} required inputMode="numeric" onChange={setHealthValue("age")} />
-                    <FloatingField id="health-gender" label="الجنس" value={healthForm.gender} error={healthErrors.gender} required onChange={setHealthValue("gender")} />
-                    <FloatingField id="health-city" label="المدينة" value={healthForm.city} error={healthErrors.city} required onChange={setHealthValue("city")} />
-                    <FloatingField id="health-address" label="العنوان" value={healthForm.address} error={healthErrors.address} onChange={setHealthValue("address")} />
-                    <FloatingField id="health-occupation" label="المهنة" value={healthForm.occupation} error={healthErrors.occupation} onChange={setHealthValue("occupation")} />
+                    <FloatingField id="health-fullName" label="Ø§Ù„Ø§Ø³Ù… Ø§Ù„ÙƒØ§Ù…Ù„" value={healthForm.fullName} error={healthErrors.fullName} required onChange={setHealthValue("fullName")} />
+                    <FloatingField id="health-mobile" label="Ø±Ù‚Ù… Ø§Ù„Ù…ÙˆØ¨Ø§ÙŠÙ„" value={healthForm.mobile} error={healthErrors.mobile} required inputMode="tel" onChange={setHealthValue("mobile")} />
+                    <FloatingField id="health-email" label="Ø§Ù„Ø¨Ø±ÙŠØ¯ Ø§Ù„Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ" value={healthForm.email} error={healthErrors.email} type="email" onChange={setHealthValue("email")} />
+                    <FloatingField id="health-nationalId" label="Ø§Ù„Ø±Ù‚Ù… Ø§Ù„ÙˆØ·Ù†ÙŠ" value={healthForm.nationalId} error={healthErrors.nationalId} required onChange={setHealthValue("nationalId")} />
+                    <FloatingField id="health-age" label="Ø§Ù„Ø¹Ù…Ø±" value={healthForm.age} error={healthErrors.age} required inputMode="numeric" onChange={setHealthValue("age")} />
+                    <FloatingField id="health-gender" label="Ø§Ù„Ø¬Ù†Ø³" value={healthForm.gender} error={healthErrors.gender} required onChange={setHealthValue("gender")} />
+                    <FloatingField id="health-city" label="Ø§Ù„Ù…Ø¯ÙŠÙ†Ø©" value={healthForm.city} error={healthErrors.city} required onChange={setHealthValue("city")} />
+                    <FloatingField id="health-address" label="Ø§Ù„Ø¹Ù†ÙˆØ§Ù†" value={healthForm.address} error={healthErrors.address} onChange={setHealthValue("address")} />
+                    <FloatingField id="health-occupation" label="Ø§Ù„Ù…Ù‡Ù†Ø©" value={healthForm.occupation} error={healthErrors.occupation} onChange={setHealthValue("occupation")} />
                   </div>
                 </motion.section>
 
                 <motion.section className="panel" {...sectionAnimation}>
-                  <h2>تفاصيل التغطية الصحية</h2>
+                  <h2>ØªÙØ§ØµÙŠÙ„ Ø§Ù„ØªØºØ·ÙŠØ© Ø§Ù„ØµØ­ÙŠØ©</h2>
                   <div className="grid three">
-                    <FloatingField id="health-planType" label="نوع الخطة" value={healthForm.planType} error={healthErrors.planType} required onChange={setHealthValue("planType")} />
-                    <FloatingField id="health-coverageScope" label="نطاق التغطية" value={healthForm.coverageScope} error={healthErrors.coverageScope} required onChange={setHealthValue("coverageScope")} />
-                    <FloatingField id="health-insuredMembersCount" label="عدد المؤمنين" value={healthForm.insuredMembersCount} error={healthErrors.insuredMembersCount} required inputMode="numeric" onChange={setHealthValue("insuredMembersCount")} />
-                    <FloatingField id="health-companyName" label="اسم الشركة" value={healthForm.companyName} error={healthErrors.companyName} onChange={setHealthValue("companyName")} />
-                    <FloatingField id="health-coverageStartDate" label="تاريخ بداية التغطية" value={healthForm.coverageStartDate} error={healthErrors.coverageStartDate} type="date" onChange={setHealthValue("coverageStartDate")} />
-                    <FloatingField id="health-coverageEndDate" label="تاريخ نهاية التغطية" value={healthForm.coverageEndDate} error={healthErrors.coverageEndDate} type="date" onChange={setHealthValue("coverageEndDate")} />
-                    <FloatingField id="health-estimatedAnnualPremium" label="القسط السنوي المتوقع" value={healthForm.estimatedAnnualPremium} error={healthErrors.estimatedAnnualPremium} inputMode="decimal" onChange={setHealthValue("estimatedAnnualPremium")} />
-                    <FloatingField id="health-currency" label="العملة" value={healthForm.currency} error={healthErrors.currency} required onChange={setHealthValue("currency")} />
-                    <FloatingField id="health-preferredHospitals" label="المستشفيات المفضلة" value={healthForm.preferredHospitals} error={healthErrors.preferredHospitals} onChange={setHealthValue("preferredHospitals")} />
+                    <FloatingField id="health-planType" label="Ù†ÙˆØ¹ Ø§Ù„Ø®Ø·Ø©" value={healthForm.planType} error={healthErrors.planType} required onChange={setHealthValue("planType")} />
+                    <FloatingField id="health-coverageScope" label="Ù†Ø·Ø§Ù‚ Ø§Ù„ØªØºØ·ÙŠØ©" value={healthForm.coverageScope} error={healthErrors.coverageScope} required onChange={setHealthValue("coverageScope")} />
+                    <FloatingField id="health-insuredMembersCount" label="Ø¹Ø¯Ø¯ Ø§Ù„Ù…Ø¤Ù…Ù†ÙŠÙ†" value={healthForm.insuredMembersCount} error={healthErrors.insuredMembersCount} required inputMode="numeric" onChange={setHealthValue("insuredMembersCount")} />
+                    <FloatingField id="health-companyName" label="Ø§Ø³Ù… Ø§Ù„Ø´Ø±ÙƒØ©" value={healthForm.companyName} error={healthErrors.companyName} onChange={setHealthValue("companyName")} />
+                    <FloatingField id="health-coverageStartDate" label="ØªØ§Ø±ÙŠØ® Ø¨Ø¯Ø§ÙŠØ© Ø§Ù„ØªØºØ·ÙŠØ©" value={healthForm.coverageStartDate} error={healthErrors.coverageStartDate} type="date" onChange={setHealthValue("coverageStartDate")} />
+                    <FloatingField id="health-coverageEndDate" label="ØªØ§Ø±ÙŠØ® Ù†Ù‡Ø§ÙŠØ© Ø§Ù„ØªØºØ·ÙŠØ©" value={healthForm.coverageEndDate} error={healthErrors.coverageEndDate} type="date" onChange={setHealthValue("coverageEndDate")} />
+                    <FloatingField id="health-estimatedAnnualPremium" label="Ø§Ù„Ù‚Ø³Ø· Ø§Ù„Ø³Ù†ÙˆÙŠ Ø§Ù„Ù…ØªÙˆÙ‚Ø¹" value={healthForm.estimatedAnnualPremium} error={healthErrors.estimatedAnnualPremium} inputMode="decimal" onChange={setHealthValue("estimatedAnnualPremium")} />
+                    <FloatingField id="health-currency" label="Ø§Ù„Ø¹Ù…Ù„Ø©" value={healthForm.currency} error={healthErrors.currency} required onChange={setHealthValue("currency")} />
+                    <FloatingField id="health-preferredHospitals" label="Ø§Ù„Ù…Ø³ØªØ´ÙÙŠØ§Øª Ø§Ù„Ù…ÙØ¶Ù„Ø©" value={healthForm.preferredHospitals} error={healthErrors.preferredHospitals} onChange={setHealthValue("preferredHospitals")} />
                   </div>
                 </motion.section>
 
                 <motion.section className="panel" {...sectionAnimation}>
-                  <h2>الحالة الصحية والتأمين السابق</h2>
+                  <h2>Ø§Ù„Ø­Ø§Ù„Ø© Ø§Ù„ØµØ­ÙŠØ© ÙˆØ§Ù„ØªØ£Ù…ÙŠÙ† Ø§Ù„Ø³Ø§Ø¨Ù‚</h2>
                   <div className="grid two">
                     <label className="confirm compact-confirm">
                       <input type="checkbox" checked={healthForm.hasChronicConditions} onChange={setHealthValue("hasChronicConditions")} />
-                      <span>يوجد أمراض أو حالات مزمنة</span>
+                      <span>ÙŠÙˆØ¬Ø¯ Ø£Ù…Ø±Ø§Ø¶ Ø£Ùˆ Ø­Ø§Ù„Ø§Øª Ù…Ø²Ù…Ù†Ø©</span>
                     </label>
                     <label className="confirm compact-confirm">
                       <input type="checkbox" checked={healthForm.previousInsurance} onChange={setHealthValue("previousInsurance")} />
-                      <span>يوجد تأمين صحي سابق</span>
+                      <span>ÙŠÙˆØ¬Ø¯ ØªØ£Ù…ÙŠÙ† ØµØ­ÙŠ Ø³Ø§Ø¨Ù‚</span>
                     </label>
-                    <FloatingField id="health-chronicConditions" label="تفاصيل الحالات المزمنة" value={healthForm.chronicConditions} error={healthErrors.chronicConditions} multiline rows={5} onChange={setHealthValue("chronicConditions")} />
-                    <FloatingField id="health-previousInsurer" label="شركة التأمين السابقة" value={healthForm.previousInsurer} error={healthErrors.previousInsurer} onChange={setHealthValue("previousInsurer")} />
-                    <FloatingField id="health-notes" label="ملاحظات" value={healthForm.notes} error={healthErrors.notes} multiline rows={5} onChange={setHealthValue("notes")} />
+                    <FloatingField id="health-chronicConditions" label="ØªÙØ§ØµÙŠÙ„ Ø§Ù„Ø­Ø§Ù„Ø§Øª Ø§Ù„Ù…Ø²Ù…Ù†Ø©" value={healthForm.chronicConditions} error={healthErrors.chronicConditions} multiline rows={5} onChange={setHealthValue("chronicConditions")} />
+                    <FloatingField id="health-previousInsurer" label="Ø´Ø±ÙƒØ© Ø§Ù„ØªØ£Ù…ÙŠÙ† Ø§Ù„Ø³Ø§Ø¨Ù‚Ø©" value={healthForm.previousInsurer} error={healthErrors.previousInsurer} onChange={setHealthValue("previousInsurer")} />
+                    <FloatingField id="health-notes" label="Ù…Ù„Ø§Ø­Ø¸Ø§Øª" value={healthForm.notes} error={healthErrors.notes} multiline rows={5} onChange={setHealthValue("notes")} />
                   </div>
                 </motion.section>
 
                 <motion.section className="panel review-panel" {...sectionAnimation}>
-                  <h2>مراجعة الطلب</h2>
+                  <h2>Ù…Ø±Ø§Ø¬Ø¹Ø© Ø§Ù„Ø·Ù„Ø¨</h2>
                   <div className="review-grid">
-                    <span>العميل</span>
+                    <span>Ø§Ù„Ø¹Ù…ÙŠÙ„</span>
                     <strong>{healthForm.fullName || "-"}</strong>
-                    <span>الخطة</span>
+                    <span>Ø§Ù„Ø®Ø·Ø©</span>
                     <strong>{healthForm.planType || "-"}</strong>
-                    <span>عدد المؤمنين</span>
+                    <span>Ø¹Ø¯Ø¯ Ø§Ù„Ù…Ø¤Ù…Ù†ÙŠÙ†</span>
                     <strong>{healthForm.insuredMembersCount || "-"}</strong>
-                    <span>القسط المتوقع</span>
+                    <span>Ø§Ù„Ù‚Ø³Ø· Ø§Ù„Ù…ØªÙˆÙ‚Ø¹</span>
                     <strong>{healthForm.estimatedAnnualPremium ? `${healthForm.estimatedAnnualPremium} ${healthForm.currency}` : "-"}</strong>
                   </div>
                   <label className={`confirm ${healthErrors.confirmed ? "field-error" : ""}`}>
                     <input type="checkbox" checked={healthForm.confirmed} onChange={setHealthValue("confirmed")} />
-                    <span>أؤكد صحة المعلومات وأوافق على إرسال طلب التأمين الصحي إلى TRINSU.</span>
+                    <span>Ø£Ø¤ÙƒØ¯ ØµØ­Ø© Ø§Ù„Ù…Ø¹Ù„ÙˆÙ…Ø§Øª ÙˆØ£ÙˆØ§ÙÙ‚ Ø¹Ù„Ù‰ Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨ Ø§Ù„ØªØ£Ù…ÙŠÙ† Ø§Ù„ØµØ­ÙŠ Ø¥Ù„Ù‰ TRINSU.</span>
                   </label>
                   {healthErrors.confirmed ? <p className="error-text">{healthErrors.confirmed}</p> : null}
                   {healthSubmitError ? <p className="submit-error" role="alert">{healthSubmitError}</p> : null}
                   <button className="submit-button" type="submit" disabled={isHealthSubmitting}>
                     {isHealthSubmitting ? <span className="spinner" aria-hidden="true" /> : <CheckCircle2 size={20} aria-hidden="true" />}
-                    {isHealthSubmitting ? "جاري الإرسال" : "إرسال طلب التأمين الصحي"}
+                    {isHealthSubmitting ? "Ø¬Ø§Ø±ÙŠ Ø§Ù„Ø¥Ø±Ø³Ø§Ù„" : "Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨ Ø§Ù„ØªØ£Ù…ÙŠÙ† Ø§Ù„ØµØ­ÙŠ"}
                   </button>
                 </motion.section>
 
                 {healthRequest ? (
                   <motion.section className="success-panel" role="status" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
                     <CheckCircle2 size={42} aria-hidden="true" />
-                    <h2>تم إرسال طلب التأمين الصحي</h2>
-                    <p>تم تسجيل الطلب الصحي في نظام TRINSU بنجاح.</p>
+                    <h2>ØªÙ… Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨ Ø§Ù„ØªØ£Ù…ÙŠÙ† Ø§Ù„ØµØ­ÙŠ</h2>
+                    <p>ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø·Ù„Ø¨ Ø§Ù„ØµØ­ÙŠ ÙÙŠ Ù†Ø¸Ø§Ù… TRINSU Ø¨Ù†Ø¬Ø§Ø­.</p>
                     <div className="success-numbers">
                       <div>
-                        <span>رقم الطلب</span>
+                        <span>Ø±Ù‚Ù… Ø§Ù„Ø·Ù„Ø¨</span>
                         <strong>{healthRequest.requestNumber}</strong>
                       </div>
                       <div>
-                        <span>رقم التتبع</span>
+                        <span>Ø±Ù‚Ù… Ø§Ù„ØªØªØ¨Ø¹</span>
                         <strong>{healthRequest.trackingNumber}</strong>
                       </div>
                     </div>
                     <div className="success-status">
-                      <span>الحالة</span>
+                      <span>Ø§Ù„Ø­Ø§Ù„Ø©</span>
                       <strong>{healthRequest.status}</strong>
                     </div>
                   </motion.section>
@@ -1626,10 +1731,10 @@ function App() {
               <div>
                 <span className="eyebrow">
                   <Flame size={18} aria-hidden="true" />
-                  تأمين الحريق والسرقة
+                  ØªØ£Ù…ÙŠÙ† Ø§Ù„Ø­Ø±ÙŠÙ‚ ÙˆØ§Ù„Ø³Ø±Ù‚Ø©
                 </span>
-                <h1>طلب تأمين حريق وسرقة</h1>
-                <p>أدخل بيانات العميل والعقار ومبالغ التأمين وأنظمة الحماية ليتم تسجيل الطلب ومتابعته داخل النظام.</p>
+                <h1>Ø·Ù„Ø¨ ØªØ£Ù…ÙŠÙ† Ø­Ø±ÙŠÙ‚ ÙˆØ³Ø±Ù‚Ø©</h1>
+                <p>Ø£Ø¯Ø®Ù„ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø¹Ù…ÙŠÙ„ ÙˆØ§Ù„Ø¹Ù‚Ø§Ø± ÙˆÙ…Ø¨Ø§Ù„Øº Ø§Ù„ØªØ£Ù…ÙŠÙ† ÙˆØ£Ù†Ø¸Ù…Ø© Ø§Ù„Ø­Ù…Ø§ÙŠØ© Ù„ÙŠØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø·Ù„Ø¨ ÙˆÙ…ØªØ§Ø¨Ø¹ØªÙ‡ Ø¯Ø§Ø®Ù„ Ø§Ù„Ù†Ø¸Ø§Ù….</p>
               </div>
               <div className="engineering-metrics fire-theft-metrics" aria-hidden="true">
                 <span>FTH</span>
@@ -1641,98 +1746,98 @@ function App() {
             <form id="fire-theft-request-form" className="request-form" onSubmit={submitFireTheft} noValidate>
               <fieldset className="form-fieldset" disabled={isFireTheftSubmitting}>
                 <motion.section className="panel" {...sectionAnimation}>
-                  <h2>معلومات العميل</h2>
+                  <h2>Ù…Ø¹Ù„ÙˆÙ…Ø§Øª Ø§Ù„Ø¹Ù…ÙŠÙ„</h2>
                   <div className="grid three">
-                    <FloatingField id="fire-fullName" label="الاسم الكامل" value={fireTheftForm.fullName} error={fireTheftErrors.fullName} required onChange={setFireTheftValue("fullName")} />
-                    <FloatingField id="fire-mobile" label="رقم الموبايل" value={fireTheftForm.mobile} error={fireTheftErrors.mobile} required inputMode="tel" onChange={setFireTheftValue("mobile")} />
-                    <FloatingField id="fire-email" label="البريد الإلكتروني" value={fireTheftForm.email} error={fireTheftErrors.email} type="email" onChange={setFireTheftValue("email")} />
-                    <FloatingField id="fire-nationalId" label="الرقم الوطني" value={fireTheftForm.nationalId} error={fireTheftErrors.nationalId} required onChange={setFireTheftValue("nationalId")} />
-                    <FloatingField id="fire-city" label="المدينة" value={fireTheftForm.city} error={fireTheftErrors.city} required onChange={setFireTheftValue("city")} />
-                    <FloatingField id="fire-address" label="عنوان العميل" value={fireTheftForm.address} error={fireTheftErrors.address} onChange={setFireTheftValue("address")} />
+                    <FloatingField id="fire-fullName" label="Ø§Ù„Ø§Ø³Ù… Ø§Ù„ÙƒØ§Ù…Ù„" value={fireTheftForm.fullName} error={fireTheftErrors.fullName} required onChange={setFireTheftValue("fullName")} />
+                    <FloatingField id="fire-mobile" label="Ø±Ù‚Ù… Ø§Ù„Ù…ÙˆØ¨Ø§ÙŠÙ„" value={fireTheftForm.mobile} error={fireTheftErrors.mobile} required inputMode="tel" onChange={setFireTheftValue("mobile")} />
+                    <FloatingField id="fire-email" label="Ø§Ù„Ø¨Ø±ÙŠØ¯ Ø§Ù„Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ" value={fireTheftForm.email} error={fireTheftErrors.email} type="email" onChange={setFireTheftValue("email")} />
+                    <FloatingField id="fire-nationalId" label="Ø§Ù„Ø±Ù‚Ù… Ø§Ù„ÙˆØ·Ù†ÙŠ" value={fireTheftForm.nationalId} error={fireTheftErrors.nationalId} required onChange={setFireTheftValue("nationalId")} />
+                    <FloatingField id="fire-city" label="Ø§Ù„Ù…Ø¯ÙŠÙ†Ø©" value={fireTheftForm.city} error={fireTheftErrors.city} required onChange={setFireTheftValue("city")} />
+                    <FloatingField id="fire-address" label="Ø¹Ù†ÙˆØ§Ù† Ø§Ù„Ø¹Ù…ÙŠÙ„" value={fireTheftForm.address} error={fireTheftErrors.address} onChange={setFireTheftValue("address")} />
                   </div>
                 </motion.section>
 
                 <motion.section className="panel" {...sectionAnimation}>
-                  <h2>معلومات العقار</h2>
+                  <h2>Ù…Ø¹Ù„ÙˆÙ…Ø§Øª Ø§Ù„Ø¹Ù‚Ø§Ø±</h2>
                   <div className="grid three">
-                    <FloatingField id="fire-propertyType" label="نوع العقار" value={fireTheftForm.propertyType} error={fireTheftErrors.propertyType} required onChange={setFireTheftValue("propertyType")} />
-                    <FloatingField id="fire-propertyUsage" label="استخدام العقار" value={fireTheftForm.propertyUsage} error={fireTheftErrors.propertyUsage} required onChange={setFireTheftValue("propertyUsage")} />
-                    <FloatingField id="fire-propertyAddress" label="عنوان العقار" value={fireTheftForm.propertyAddress} error={fireTheftErrors.propertyAddress} required onChange={setFireTheftValue("propertyAddress")} />
-                    <FloatingField id="fire-coverageScope" label="نطاق التغطية" value={fireTheftForm.coverageScope} error={fireTheftErrors.coverageScope} required onChange={setFireTheftValue("coverageScope")} />
+                    <FloatingField id="fire-propertyType" label="Ù†ÙˆØ¹ Ø§Ù„Ø¹Ù‚Ø§Ø±" value={fireTheftForm.propertyType} error={fireTheftErrors.propertyType} required onChange={setFireTheftValue("propertyType")} />
+                    <FloatingField id="fire-propertyUsage" label="Ø§Ø³ØªØ®Ø¯Ø§Ù… Ø§Ù„Ø¹Ù‚Ø§Ø±" value={fireTheftForm.propertyUsage} error={fireTheftErrors.propertyUsage} required onChange={setFireTheftValue("propertyUsage")} />
+                    <FloatingField id="fire-propertyAddress" label="Ø¹Ù†ÙˆØ§Ù† Ø§Ù„Ø¹Ù‚Ø§Ø±" value={fireTheftForm.propertyAddress} error={fireTheftErrors.propertyAddress} required onChange={setFireTheftValue("propertyAddress")} />
+                    <FloatingField id="fire-coverageScope" label="Ù†Ø·Ø§Ù‚ Ø§Ù„ØªØºØ·ÙŠØ©" value={fireTheftForm.coverageScope} error={fireTheftErrors.coverageScope} required onChange={setFireTheftValue("coverageScope")} />
                   </div>
                 </motion.section>
 
                 <motion.section className="panel" {...sectionAnimation}>
-                  <h2>مبالغ التأمين وأنظمة السلامة</h2>
+                  <h2>Ù…Ø¨Ø§Ù„Øº Ø§Ù„ØªØ£Ù…ÙŠÙ† ÙˆØ£Ù†Ø¸Ù…Ø© Ø§Ù„Ø³Ù„Ø§Ù…Ø©</h2>
                   <div className="grid three">
-                    <FloatingField id="fire-buildingValue" label="قيمة المبنى" value={fireTheftForm.buildingValue} error={fireTheftErrors.buildingValue} required inputMode="decimal" onChange={setFireTheftValue("buildingValue")} />
-                    <FloatingField id="fire-contentsValue" label="قيمة المحتويات" value={fireTheftForm.contentsValue} error={fireTheftErrors.contentsValue} inputMode="decimal" onChange={setFireTheftValue("contentsValue")} />
-                    <FloatingField id="fire-stockValue" label="قيمة المخزون" value={fireTheftForm.stockValue} error={fireTheftErrors.stockValue} inputMode="decimal" onChange={setFireTheftValue("stockValue")} />
-                    <FloatingField id="fire-totalSumInsured" label="إجمالي مبلغ التأمين" value={fireTheftForm.totalSumInsured} error={fireTheftErrors.totalSumInsured} required inputMode="decimal" onChange={setFireTheftValue("totalSumInsured")} />
-                    <FloatingField id="fire-currency" label="العملة" value={fireTheftForm.currency} error={fireTheftErrors.currency} required onChange={setFireTheftValue("currency")} />
+                    <FloatingField id="fire-buildingValue" label="Ù‚ÙŠÙ…Ø© Ø§Ù„Ù…Ø¨Ù†Ù‰" value={fireTheftForm.buildingValue} error={fireTheftErrors.buildingValue} required inputMode="decimal" onChange={setFireTheftValue("buildingValue")} />
+                    <FloatingField id="fire-contentsValue" label="Ù‚ÙŠÙ…Ø© Ø§Ù„Ù…Ø­ØªÙˆÙŠØ§Øª" value={fireTheftForm.contentsValue} error={fireTheftErrors.contentsValue} inputMode="decimal" onChange={setFireTheftValue("contentsValue")} />
+                    <FloatingField id="fire-stockValue" label="Ù‚ÙŠÙ…Ø© Ø§Ù„Ù…Ø®Ø²ÙˆÙ†" value={fireTheftForm.stockValue} error={fireTheftErrors.stockValue} inputMode="decimal" onChange={setFireTheftValue("stockValue")} />
+                    <FloatingField id="fire-totalSumInsured" label="Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ù…Ø¨Ù„Øº Ø§Ù„ØªØ£Ù…ÙŠÙ†" value={fireTheftForm.totalSumInsured} error={fireTheftErrors.totalSumInsured} required inputMode="decimal" onChange={setFireTheftValue("totalSumInsured")} />
+                    <FloatingField id="fire-currency" label="Ø§Ù„Ø¹Ù…Ù„Ø©" value={fireTheftForm.currency} error={fireTheftErrors.currency} required onChange={setFireTheftValue("currency")} />
                   </div>
                   <div className="grid three">
                     <label className="confirm compact-confirm">
                       <input type="checkbox" checked={fireTheftForm.hasFireAlarm} onChange={setFireTheftValue("hasFireAlarm")} />
-                      <span>يوجد نظام إنذار حريق</span>
+                      <span>ÙŠÙˆØ¬Ø¯ Ù†Ø¸Ø§Ù… Ø¥Ù†Ø°Ø§Ø± Ø­Ø±ÙŠÙ‚</span>
                     </label>
                     <label className="confirm compact-confirm">
                       <input type="checkbox" checked={fireTheftForm.hasFireExtinguishers} onChange={setFireTheftValue("hasFireExtinguishers")} />
-                      <span>تتوفر مطافئ حريق</span>
+                      <span>ØªØªÙˆÙØ± Ù…Ø·Ø§ÙØ¦ Ø­Ø±ÙŠÙ‚</span>
                     </label>
                     <label className="confirm compact-confirm">
                       <input type="checkbox" checked={fireTheftForm.hasSecuritySystem} onChange={setFireTheftValue("hasSecuritySystem")} />
-                      <span>يوجد نظام حماية أو مراقبة</span>
+                      <span>ÙŠÙˆØ¬Ø¯ Ù†Ø¸Ø§Ù… Ø­Ù…Ø§ÙŠØ© Ø£Ùˆ Ù…Ø±Ø§Ù‚Ø¨Ø©</span>
                     </label>
                   </div>
                 </motion.section>
 
                 <motion.section className="panel" {...sectionAnimation}>
-                  <h2>ملاحظات</h2>
-                  <FloatingField id="fire-notes" label="ملاحظات إضافية" value={fireTheftForm.notes} error={fireTheftErrors.notes} multiline rows={6} onChange={setFireTheftValue("notes")} />
+                  <h2>Ù…Ù„Ø§Ø­Ø¸Ø§Øª</h2>
+                  <FloatingField id="fire-notes" label="Ù…Ù„Ø§Ø­Ø¸Ø§Øª Ø¥Ø¶Ø§ÙÙŠØ©" value={fireTheftForm.notes} error={fireTheftErrors.notes} multiline rows={6} onChange={setFireTheftValue("notes")} />
                 </motion.section>
 
                 <motion.section className="panel review-panel" {...sectionAnimation}>
-                  <h2>مراجعة الطلب</h2>
+                  <h2>Ù…Ø±Ø§Ø¬Ø¹Ø© Ø§Ù„Ø·Ù„Ø¨</h2>
                   <div className="review-grid">
-                    <span>العميل</span>
+                    <span>Ø§Ù„Ø¹Ù…ÙŠÙ„</span>
                     <strong>{fireTheftForm.fullName || "-"}</strong>
-                    <span>العقار</span>
+                    <span>Ø§Ù„Ø¹Ù‚Ø§Ø±</span>
                     <strong>{fireTheftForm.propertyType || "-"}</strong>
-                    <span>عنوان العقار</span>
+                    <span>Ø¹Ù†ÙˆØ§Ù† Ø§Ù„Ø¹Ù‚Ø§Ø±</span>
                     <strong>{fireTheftForm.propertyAddress || "-"}</strong>
-                    <span>إجمالي مبلغ التأمين</span>
+                    <span>Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ù…Ø¨Ù„Øº Ø§Ù„ØªØ£Ù…ÙŠÙ†</span>
                     <strong>{fireTheftForm.totalSumInsured ? `${fireTheftForm.totalSumInsured} ${fireTheftForm.currency}` : "-"}</strong>
                   </div>
                   <label className={`confirm ${fireTheftErrors.confirmed ? "field-error" : ""}`}>
                     <input type="checkbox" checked={fireTheftForm.confirmed} onChange={setFireTheftValue("confirmed")} />
-                    <span>أؤكد صحة المعلومات وأوافق على إرسال طلب تأمين الحريق والسرقة إلى TRINSU.</span>
+                    <span>Ø£Ø¤ÙƒØ¯ ØµØ­Ø© Ø§Ù„Ù…Ø¹Ù„ÙˆÙ…Ø§Øª ÙˆØ£ÙˆØ§ÙÙ‚ Ø¹Ù„Ù‰ Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨ ØªØ£Ù…ÙŠÙ† Ø§Ù„Ø­Ø±ÙŠÙ‚ ÙˆØ§Ù„Ø³Ø±Ù‚Ø© Ø¥Ù„Ù‰ TRINSU.</span>
                   </label>
                   {fireTheftErrors.confirmed ? <p className="error-text">{fireTheftErrors.confirmed}</p> : null}
                   {fireTheftSubmitError ? <p id="fire-theft-submit-error" className="submit-error" role="alert">{fireTheftSubmitError}</p> : null}
                   <button className="submit-button" type="submit" disabled={isFireTheftSubmitting}>
                     {isFireTheftSubmitting ? <span className="spinner" aria-hidden="true" /> : <CheckCircle2 size={20} aria-hidden="true" />}
-                    {isFireTheftSubmitting ? "جاري الإرسال" : "إرسال طلب تأمين الحريق والسرقة"}
+                    {isFireTheftSubmitting ? "Ø¬Ø§Ø±ÙŠ Ø§Ù„Ø¥Ø±Ø³Ø§Ù„" : "Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨ ØªØ£Ù…ÙŠÙ† Ø§Ù„Ø­Ø±ÙŠÙ‚ ÙˆØ§Ù„Ø³Ø±Ù‚Ø©"}
                   </button>
                 </motion.section>
 
                 {fireTheftRequest ? (
                   <motion.section className="success-panel" role="status" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
                     <CheckCircle2 size={42} aria-hidden="true" />
-                    <h2>تم إرسال طلب تأمين الحريق والسرقة</h2>
-                    <p>تم تسجيل الطلب في نظام TRINSU بنجاح.</p>
+                    <h2>ØªÙ… Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨ ØªØ£Ù…ÙŠÙ† Ø§Ù„Ø­Ø±ÙŠÙ‚ ÙˆØ§Ù„Ø³Ø±Ù‚Ø©</h2>
+                    <p>ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø·Ù„Ø¨ ÙÙŠ Ù†Ø¸Ø§Ù… TRINSU Ø¨Ù†Ø¬Ø§Ø­.</p>
                     <div className="success-numbers">
                       <div>
-                        <span>رقم الطلب</span>
+                        <span>Ø±Ù‚Ù… Ø§Ù„Ø·Ù„Ø¨</span>
                         <strong>{fireTheftRequest.requestNumber}</strong>
                       </div>
                       <div>
-                        <span>رقم التتبع</span>
+                        <span>Ø±Ù‚Ù… Ø§Ù„ØªØªØ¨Ø¹</span>
                         <strong>{fireTheftRequest.trackingNumber}</strong>
                       </div>
                     </div>
                     <div className="success-status">
-                      <span>الحالة</span>
+                      <span>Ø§Ù„Ø­Ø§Ù„Ø©</span>
                       <strong>{fireTheftRequest.status}</strong>
                     </div>
                   </motion.section>
@@ -1748,10 +1853,10 @@ function App() {
               <div>
                 <span className="eyebrow">
                   <ShieldAlert size={18} aria-hidden="true" />
-                  تأمين الحوادث العامة
+                  ØªØ£Ù…ÙŠÙ† Ø§Ù„Ø­ÙˆØ§Ø¯Ø« Ø§Ù„Ø¹Ø§Ù…Ø©
                 </span>
-                <h1>طلب تأمين حوادث عامة</h1>
-                <p>أدخل بيانات العميل والنشاط وموقع الخطر وحدود التغطية ليتم تسجيل الطلب ومتابعته داخل النظام.</p>
+                <h1>Ø·Ù„Ø¨ ØªØ£Ù…ÙŠÙ† Ø­ÙˆØ§Ø¯Ø« Ø¹Ø§Ù…Ø©</h1>
+                <p>Ø£Ø¯Ø®Ù„ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø¹Ù…ÙŠÙ„ ÙˆØ§Ù„Ù†Ø´Ø§Ø· ÙˆÙ…ÙˆÙ‚Ø¹ Ø§Ù„Ø®Ø·Ø± ÙˆØ­Ø¯ÙˆØ¯ Ø§Ù„ØªØºØ·ÙŠØ© Ù„ÙŠØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø·Ù„Ø¨ ÙˆÙ…ØªØ§Ø¨Ø¹ØªÙ‡ Ø¯Ø§Ø®Ù„ Ø§Ù„Ù†Ø¸Ø§Ù….</p>
               </div>
               <div className="engineering-metrics general-accident-metrics" aria-hidden="true">
                 <span>GAC</span>
@@ -1763,100 +1868,100 @@ function App() {
             <form id="general-accident-request-form" className="request-form" onSubmit={submitGeneralAccident} noValidate>
               <fieldset className="form-fieldset" disabled={isGeneralAccidentSubmitting}>
                 <motion.section className="panel" {...sectionAnimation}>
-                  <h2>معلومات العميل</h2>
+                  <h2>Ù…Ø¹Ù„ÙˆÙ…Ø§Øª Ø§Ù„Ø¹Ù…ÙŠÙ„</h2>
                   <div className="grid three">
-                    <FloatingField id="gac-fullName" label="الاسم الكامل" value={generalAccidentForm.fullName} error={generalAccidentErrors.fullName} required onChange={setGeneralAccidentValue("fullName")} />
-                    <FloatingField id="gac-mobile" label="رقم الموبايل" value={generalAccidentForm.mobile} error={generalAccidentErrors.mobile} required inputMode="tel" onChange={setGeneralAccidentValue("mobile")} />
-                    <FloatingField id="gac-email" label="البريد الإلكتروني" value={generalAccidentForm.email} error={generalAccidentErrors.email} type="email" onChange={setGeneralAccidentValue("email")} />
-                    <FloatingField id="gac-nationalId" label="الرقم الوطني" value={generalAccidentForm.nationalId} error={generalAccidentErrors.nationalId} required onChange={setGeneralAccidentValue("nationalId")} />
-                    <FloatingField id="gac-city" label="المدينة" value={generalAccidentForm.city} error={generalAccidentErrors.city} required onChange={setGeneralAccidentValue("city")} />
-                    <FloatingField id="gac-address" label="عنوان العميل" value={generalAccidentForm.address} error={generalAccidentErrors.address} onChange={setGeneralAccidentValue("address")} />
+                    <FloatingField id="gac-fullName" label="Ø§Ù„Ø§Ø³Ù… Ø§Ù„ÙƒØ§Ù…Ù„" value={generalAccidentForm.fullName} error={generalAccidentErrors.fullName} required onChange={setGeneralAccidentValue("fullName")} />
+                    <FloatingField id="gac-mobile" label="Ø±Ù‚Ù… Ø§Ù„Ù…ÙˆØ¨Ø§ÙŠÙ„" value={generalAccidentForm.mobile} error={generalAccidentErrors.mobile} required inputMode="tel" onChange={setGeneralAccidentValue("mobile")} />
+                    <FloatingField id="gac-email" label="Ø§Ù„Ø¨Ø±ÙŠØ¯ Ø§Ù„Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ" value={generalAccidentForm.email} error={generalAccidentErrors.email} type="email" onChange={setGeneralAccidentValue("email")} />
+                    <FloatingField id="gac-nationalId" label="Ø§Ù„Ø±Ù‚Ù… Ø§Ù„ÙˆØ·Ù†ÙŠ" value={generalAccidentForm.nationalId} error={generalAccidentErrors.nationalId} required onChange={setGeneralAccidentValue("nationalId")} />
+                    <FloatingField id="gac-city" label="Ø§Ù„Ù…Ø¯ÙŠÙ†Ø©" value={generalAccidentForm.city} error={generalAccidentErrors.city} required onChange={setGeneralAccidentValue("city")} />
+                    <FloatingField id="gac-address" label="Ø¹Ù†ÙˆØ§Ù† Ø§Ù„Ø¹Ù…ÙŠÙ„" value={generalAccidentForm.address} error={generalAccidentErrors.address} onChange={setGeneralAccidentValue("address")} />
                   </div>
                 </motion.section>
 
                 <motion.section className="panel" {...sectionAnimation}>
-                  <h2>تفاصيل النشاط والخطر</h2>
+                  <h2>ØªÙØ§ØµÙŠÙ„ Ø§Ù„Ù†Ø´Ø§Ø· ÙˆØ§Ù„Ø®Ø·Ø±</h2>
                   <div className="grid three">
-                    <FloatingField id="gac-insuredName" label="اسم المؤمن له" value={generalAccidentForm.insuredName} error={generalAccidentErrors.insuredName} required onChange={setGeneralAccidentValue("insuredName")} />
-                    <FloatingField id="gac-businessActivity" label="نشاط العمل" value={generalAccidentForm.businessActivity} error={generalAccidentErrors.businessActivity} required onChange={setGeneralAccidentValue("businessActivity")} />
-                    <FloatingField id="gac-accidentType" label="نوع الحادث" value={generalAccidentForm.accidentType} error={generalAccidentErrors.accidentType} required onChange={setGeneralAccidentValue("accidentType")} />
-                    <FloatingField id="gac-coverageScope" label="نطاق التغطية" value={generalAccidentForm.coverageScope} error={generalAccidentErrors.coverageScope} required onChange={setGeneralAccidentValue("coverageScope")} />
-                    <FloatingField id="gac-riskLocation" label="موقع الخطر" value={generalAccidentForm.riskLocation} error={generalAccidentErrors.riskLocation} required onChange={setGeneralAccidentValue("riskLocation")} />
-                    <FloatingField id="gac-riskCity" label="مدينة الخطر" value={generalAccidentForm.riskCity} error={generalAccidentErrors.riskCity} required onChange={setGeneralAccidentValue("riskCity")} />
+                    <FloatingField id="gac-insuredName" label="Ø§Ø³Ù… Ø§Ù„Ù…Ø¤Ù…Ù† Ù„Ù‡" value={generalAccidentForm.insuredName} error={generalAccidentErrors.insuredName} required onChange={setGeneralAccidentValue("insuredName")} />
+                    <FloatingField id="gac-businessActivity" label="Ù†Ø´Ø§Ø· Ø§Ù„Ø¹Ù…Ù„" value={generalAccidentForm.businessActivity} error={generalAccidentErrors.businessActivity} required onChange={setGeneralAccidentValue("businessActivity")} />
+                    <FloatingField id="gac-accidentType" label="Ù†ÙˆØ¹ Ø§Ù„Ø­Ø§Ø¯Ø«" value={generalAccidentForm.accidentType} error={generalAccidentErrors.accidentType} required onChange={setGeneralAccidentValue("accidentType")} />
+                    <FloatingField id="gac-coverageScope" label="Ù†Ø·Ø§Ù‚ Ø§Ù„ØªØºØ·ÙŠØ©" value={generalAccidentForm.coverageScope} error={generalAccidentErrors.coverageScope} required onChange={setGeneralAccidentValue("coverageScope")} />
+                    <FloatingField id="gac-riskLocation" label="Ù…ÙˆÙ‚Ø¹ Ø§Ù„Ø®Ø·Ø±" value={generalAccidentForm.riskLocation} error={generalAccidentErrors.riskLocation} required onChange={setGeneralAccidentValue("riskLocation")} />
+                    <FloatingField id="gac-riskCity" label="Ù…Ø¯ÙŠÙ†Ø© Ø§Ù„Ø®Ø·Ø±" value={generalAccidentForm.riskCity} error={generalAccidentErrors.riskCity} required onChange={setGeneralAccidentValue("riskCity")} />
                   </div>
                 </motion.section>
 
                 <motion.section className="panel" {...sectionAnimation}>
-                  <h2>حدود التغطية والأعداد</h2>
+                  <h2>Ø­Ø¯ÙˆØ¯ Ø§Ù„ØªØºØ·ÙŠØ© ÙˆØ§Ù„Ø£Ø¹Ø¯Ø§Ø¯</h2>
                   <div className="grid three">
-                    <FloatingField id="gac-employeesCount" label="عدد الموظفين" value={generalAccidentForm.employeesCount} error={generalAccidentErrors.employeesCount} required inputMode="numeric" onChange={setGeneralAccidentValue("employeesCount")} />
-                    <FloatingField id="gac-beneficiariesCount" label="عدد المستفيدين" value={generalAccidentForm.beneficiariesCount} error={generalAccidentErrors.beneficiariesCount} inputMode="numeric" onChange={setGeneralAccidentValue("beneficiariesCount")} />
-                    <FloatingField id="gac-coverageLimit" label="حد التغطية" value={generalAccidentForm.coverageLimit} error={generalAccidentErrors.coverageLimit} required inputMode="decimal" onChange={setGeneralAccidentValue("coverageLimit")} />
-                    <FloatingField id="gac-deductibleAmount" label="مبلغ التحمل" value={generalAccidentForm.deductibleAmount} error={generalAccidentErrors.deductibleAmount} inputMode="decimal" onChange={setGeneralAccidentValue("deductibleAmount")} />
-                    <FloatingField id="gac-estimatedAnnualWages" label="الأجور السنوية المقدرة" value={generalAccidentForm.estimatedAnnualWages} error={generalAccidentErrors.estimatedAnnualWages} inputMode="decimal" onChange={setGeneralAccidentValue("estimatedAnnualWages")} />
-                    <FloatingField id="gac-currency" label="العملة" value={generalAccidentForm.currency} error={generalAccidentErrors.currency} required onChange={setGeneralAccidentValue("currency")} />
+                    <FloatingField id="gac-employeesCount" label="Ø¹Ø¯Ø¯ Ø§Ù„Ù…ÙˆØ¸ÙÙŠÙ†" value={generalAccidentForm.employeesCount} error={generalAccidentErrors.employeesCount} required inputMode="numeric" onChange={setGeneralAccidentValue("employeesCount")} />
+                    <FloatingField id="gac-beneficiariesCount" label="Ø¹Ø¯Ø¯ Ø§Ù„Ù…Ø³ØªÙÙŠØ¯ÙŠÙ†" value={generalAccidentForm.beneficiariesCount} error={generalAccidentErrors.beneficiariesCount} inputMode="numeric" onChange={setGeneralAccidentValue("beneficiariesCount")} />
+                    <FloatingField id="gac-coverageLimit" label="Ø­Ø¯ Ø§Ù„ØªØºØ·ÙŠØ©" value={generalAccidentForm.coverageLimit} error={generalAccidentErrors.coverageLimit} required inputMode="decimal" onChange={setGeneralAccidentValue("coverageLimit")} />
+                    <FloatingField id="gac-deductibleAmount" label="Ù…Ø¨Ù„Øº Ø§Ù„ØªØ­Ù…Ù„" value={generalAccidentForm.deductibleAmount} error={generalAccidentErrors.deductibleAmount} inputMode="decimal" onChange={setGeneralAccidentValue("deductibleAmount")} />
+                    <FloatingField id="gac-estimatedAnnualWages" label="Ø§Ù„Ø£Ø¬ÙˆØ± Ø§Ù„Ø³Ù†ÙˆÙŠØ© Ø§Ù„Ù…Ù‚Ø¯Ø±Ø©" value={generalAccidentForm.estimatedAnnualWages} error={generalAccidentErrors.estimatedAnnualWages} inputMode="decimal" onChange={setGeneralAccidentValue("estimatedAnnualWages")} />
+                    <FloatingField id="gac-currency" label="Ø§Ù„Ø¹Ù…Ù„Ø©" value={generalAccidentForm.currency} error={generalAccidentErrors.currency} required onChange={setGeneralAccidentValue("currency")} />
                   </div>
                   <div className="grid two">
                     <label className="confirm compact-confirm">
                       <input type="checkbox" checked={generalAccidentForm.hasSafetyProgram} onChange={setGeneralAccidentValue("hasSafetyProgram")} />
-                      <span>يوجد برنامج سلامة</span>
+                      <span>ÙŠÙˆØ¬Ø¯ Ø¨Ø±Ù†Ø§Ù…Ø¬ Ø³Ù„Ø§Ù…Ø©</span>
                     </label>
                     <label className="confirm compact-confirm">
                       <input type="checkbox" checked={generalAccidentForm.previousClaims} onChange={setGeneralAccidentValue("previousClaims")} />
-                      <span>توجد مطالبات سابقة</span>
+                      <span>ØªÙˆØ¬Ø¯ Ù…Ø·Ø§Ù„Ø¨Ø§Øª Ø³Ø§Ø¨Ù‚Ø©</span>
                     </label>
                   </div>
                 </motion.section>
 
                 <motion.section className="panel" {...sectionAnimation}>
-                  <h2>تفاصيل إضافية</h2>
+                  <h2>ØªÙØ§ØµÙŠÙ„ Ø¥Ø¶Ø§ÙÙŠØ©</h2>
                   <div className="grid two">
-                    <FloatingField id="gac-riskDetails" label="تفاصيل الخطر" value={generalAccidentForm.riskDetails} error={generalAccidentErrors.riskDetails} multiline rows={6} onChange={setGeneralAccidentValue("riskDetails")} />
-                    <FloatingField id="gac-notes" label="ملاحظات" value={generalAccidentForm.notes} error={generalAccidentErrors.notes} multiline rows={6} onChange={setGeneralAccidentValue("notes")} />
+                    <FloatingField id="gac-riskDetails" label="ØªÙØ§ØµÙŠÙ„ Ø§Ù„Ø®Ø·Ø±" value={generalAccidentForm.riskDetails} error={generalAccidentErrors.riskDetails} multiline rows={6} onChange={setGeneralAccidentValue("riskDetails")} />
+                    <FloatingField id="gac-notes" label="Ù…Ù„Ø§Ø­Ø¸Ø§Øª" value={generalAccidentForm.notes} error={generalAccidentErrors.notes} multiline rows={6} onChange={setGeneralAccidentValue("notes")} />
                   </div>
                 </motion.section>
 
                 <motion.section className="panel review-panel" {...sectionAnimation}>
-                  <h2>مراجعة الطلب</h2>
+                  <h2>Ù…Ø±Ø§Ø¬Ø¹Ø© Ø§Ù„Ø·Ù„Ø¨</h2>
                   <div className="review-grid">
-                    <span>العميل</span>
+                    <span>Ø§Ù„Ø¹Ù…ÙŠÙ„</span>
                     <strong>{generalAccidentForm.fullName || "-"}</strong>
-                    <span>المؤمن له</span>
+                    <span>Ø§Ù„Ù…Ø¤Ù…Ù† Ù„Ù‡</span>
                     <strong>{generalAccidentForm.insuredName || "-"}</strong>
-                    <span>نوع الحادث</span>
+                    <span>Ù†ÙˆØ¹ Ø§Ù„Ø­Ø§Ø¯Ø«</span>
                     <strong>{generalAccidentForm.accidentType || "-"}</strong>
-                    <span>حد التغطية</span>
+                    <span>Ø­Ø¯ Ø§Ù„ØªØºØ·ÙŠØ©</span>
                     <strong>{generalAccidentForm.coverageLimit ? `${generalAccidentForm.coverageLimit} ${generalAccidentForm.currency}` : "-"}</strong>
                   </div>
                   <label className={`confirm ${generalAccidentErrors.confirmed ? "field-error" : ""}`}>
                     <input type="checkbox" checked={generalAccidentForm.confirmed} onChange={setGeneralAccidentValue("confirmed")} />
-                    <span>أؤكد صحة المعلومات وأوافق على إرسال طلب تأمين الحوادث العامة إلى TRINSU.</span>
+                    <span>Ø£Ø¤ÙƒØ¯ ØµØ­Ø© Ø§Ù„Ù…Ø¹Ù„ÙˆÙ…Ø§Øª ÙˆØ£ÙˆØ§ÙÙ‚ Ø¹Ù„Ù‰ Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨ ØªØ£Ù…ÙŠÙ† Ø§Ù„Ø­ÙˆØ§Ø¯Ø« Ø§Ù„Ø¹Ø§Ù…Ø© Ø¥Ù„Ù‰ TRINSU.</span>
                   </label>
                   {generalAccidentErrors.confirmed ? <p className="error-text">{generalAccidentErrors.confirmed}</p> : null}
                   {generalAccidentSubmitError ? <p id="general-accident-submit-error" className="submit-error" role="alert">{generalAccidentSubmitError}</p> : null}
                   <button className="submit-button" type="submit" disabled={isGeneralAccidentSubmitting}>
                     {isGeneralAccidentSubmitting ? <span className="spinner" aria-hidden="true" /> : <CheckCircle2 size={20} aria-hidden="true" />}
-                    {isGeneralAccidentSubmitting ? "جاري الإرسال" : "إرسال طلب تأمين الحوادث العامة"}
+                    {isGeneralAccidentSubmitting ? "Ø¬Ø§Ø±ÙŠ Ø§Ù„Ø¥Ø±Ø³Ø§Ù„" : "Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨ ØªØ£Ù…ÙŠÙ† Ø§Ù„Ø­ÙˆØ§Ø¯Ø« Ø§Ù„Ø¹Ø§Ù…Ø©"}
                   </button>
                 </motion.section>
 
                 {generalAccidentRequest ? (
                   <motion.section className="success-panel" role="status" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
                     <CheckCircle2 size={42} aria-hidden="true" />
-                    <h2>تم إرسال طلب تأمين الحوادث العامة</h2>
-                    <p>تم تسجيل الطلب في نظام TRINSU بنجاح.</p>
+                    <h2>ØªÙ… Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨ ØªØ£Ù…ÙŠÙ† Ø§Ù„Ø­ÙˆØ§Ø¯Ø« Ø§Ù„Ø¹Ø§Ù…Ø©</h2>
+                    <p>ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø·Ù„Ø¨ ÙÙŠ Ù†Ø¸Ø§Ù… TRINSU Ø¨Ù†Ø¬Ø§Ø­.</p>
                     <div className="success-numbers">
                       <div>
-                        <span>رقم الطلب</span>
+                        <span>Ø±Ù‚Ù… Ø§Ù„Ø·Ù„Ø¨</span>
                         <strong>{generalAccidentRequest.requestNumber}</strong>
                       </div>
                       <div>
-                        <span>رقم التتبع</span>
+                        <span>Ø±Ù‚Ù… Ø§Ù„ØªØªØ¨Ø¹</span>
                         <strong>{generalAccidentRequest.trackingNumber}</strong>
                       </div>
                     </div>
                     <div className="success-status">
-                      <span>الحالة</span>
+                      <span>Ø§Ù„Ø­Ø§Ù„Ø©</span>
                       <strong>{generalAccidentRequest.status}</strong>
                     </div>
                   </motion.section>
@@ -1866,16 +1971,150 @@ function App() {
           </>
         ) : null}
 
+        {showEnergyPage ? (
+          <>
+            <motion.section className="engineering-hero" {...sectionAnimation}>
+              <div>
+                <span className="eyebrow">
+                  <Zap size={18} aria-hidden="true" />
+                  تأمين مشاريع الطاقة
+                </span>
+                <h1>طلب تأمين طاقة</h1>
+                <p>أدخل بيانات العميل ومشروع الطاقة وقيم الأصول وحدود التغطية ليتم تسجيل الطلب ومتابعته داخل نظام TRINSU.</p>
+              </div>
+              <div className="engineering-metrics" aria-hidden="true">
+                <span>ENR</span>
+                <strong>Energy Insurance</strong>
+                <small>Power and energy request</small>
+              </div>
+            </motion.section>
+
+            <form id="energy-request-form" className="request-form" onSubmit={submitEnergy} noValidate>
+              <fieldset className="form-fieldset" disabled={isEnergySubmitting}>
+                <motion.section className="panel" {...sectionAnimation}>
+                  <h2>معلومات العميل</h2>
+                  <div className="grid three">
+                    <FloatingField id="energy-fullName" label="الاسم الكامل" value={energyForm.fullName} error={energyErrors.fullName} required onChange={setEnergyValue("fullName")} />
+                    <FloatingField id="energy-mobile" label="رقم الموبايل" value={energyForm.mobile} error={energyErrors.mobile} required inputMode="tel" onChange={setEnergyValue("mobile")} />
+                    <FloatingField id="energy-email" label="البريد الإلكتروني" value={energyForm.email} error={energyErrors.email} type="email" onChange={setEnergyValue("email")} />
+                    <FloatingField id="energy-nationalId" label="الرقم الوطني" value={energyForm.nationalId} error={energyErrors.nationalId} required onChange={setEnergyValue("nationalId")} />
+                    <FloatingField id="energy-city" label="المدينة" value={energyForm.city} error={energyErrors.city} required onChange={setEnergyValue("city")} />
+                    <FloatingField id="energy-address" label="العنوان" value={energyForm.address} error={energyErrors.address} onChange={setEnergyValue("address")} />
+                  </div>
+                </motion.section>
+
+                <motion.section className="panel" {...sectionAnimation}>
+                  <h2>تفاصيل مشروع الطاقة</h2>
+                  <div className="grid three">
+                    <FloatingField id="energy-insuredName" label="اسم المؤمن له" value={energyForm.insuredName} error={energyErrors.insuredName} required onChange={setEnergyValue("insuredName")} />
+                    <FloatingField id="energy-projectName" label="اسم المشروع" value={energyForm.projectName} error={energyErrors.projectName} required onChange={setEnergyValue("projectName")} />
+                    <FloatingField id="energy-energyType" label="نوع الطاقة" value={energyForm.energyType} error={energyErrors.energyType} required onChange={setEnergyValue("energyType")} />
+                    <FloatingField id="energy-facilityType" label="نوع المنشأة" value={energyForm.facilityType} error={energyErrors.facilityType} required onChange={setEnergyValue("facilityType")} />
+                    <FloatingField id="energy-projectLocation" label="موقع المشروع" value={energyForm.projectLocation} error={energyErrors.projectLocation} required onChange={setEnergyValue("projectLocation")} />
+                    <FloatingField id="energy-projectCity" label="مدينة المشروع" value={energyForm.projectCity} error={energyErrors.projectCity} required onChange={setEnergyValue("projectCity")} />
+                    <FloatingField id="energy-operatorName" label="اسم المشغل" value={energyForm.operatorName} error={energyErrors.operatorName} onChange={setEnergyValue("operatorName")} />
+                    <FloatingField id="energy-contractorName" label="اسم المقاول" value={energyForm.contractorName} error={energyErrors.contractorName} onChange={setEnergyValue("contractorName")} />
+                    <FloatingField id="energy-capacityMw" label="الطاقة الإنتاجية MW" value={energyForm.capacityMw} error={energyErrors.capacityMw} inputMode="decimal" onChange={setEnergyValue("capacityMw")} />
+                  </div>
+                </motion.section>
+
+                <motion.section className="panel" {...sectionAnimation}>
+                  <h2>القيم وحدود التغطية</h2>
+                  <div className="grid three">
+                    <FloatingField id="energy-assetValue" label="قيمة الأصول" value={energyForm.assetValue} error={energyErrors.assetValue} required inputMode="decimal" onChange={setEnergyValue("assetValue")} />
+                    <FloatingField id="energy-businessInterruptionLimit" label="حد توقف الأعمال" value={energyForm.businessInterruptionLimit} error={energyErrors.businessInterruptionLimit} inputMode="decimal" onChange={setEnergyValue("businessInterruptionLimit")} />
+                    <FloatingField id="energy-liabilityLimit" label="حد المسؤولية" value={energyForm.liabilityLimit} error={energyErrors.liabilityLimit} inputMode="decimal" onChange={setEnergyValue("liabilityLimit")} />
+                    <FloatingField id="energy-totalSumInsured" label="إجمالي مبلغ التأمين" value={energyForm.totalSumInsured} error={energyErrors.totalSumInsured} required inputMode="decimal" onChange={setEnergyValue("totalSumInsured")} />
+                    <FloatingField id="energy-currency" label="العملة" value={energyForm.currency} error={energyErrors.currency} required onChange={setEnergyValue("currency")} />
+                    <FloatingField id="energy-coverageScope" label="نطاق التغطية" value={energyForm.coverageScope} error={energyErrors.coverageScope} required onChange={setEnergyValue("coverageScope")} />
+                  </div>
+                </motion.section>
+
+                <motion.section className="panel" {...sectionAnimation}>
+                  <h2>المخاطر والملاحظات</h2>
+                  <div className="grid two">
+                    <label className="confirm compact-confirm">
+                      <input type="checkbox" checked={energyForm.hasFireProtection} onChange={setEnergyValue("hasFireProtection")} />
+                      <span>توجد أنظمة حماية من الحريق</span>
+                    </label>
+                    <label className="confirm compact-confirm">
+                      <input type="checkbox" checked={energyForm.hasMaintenancePlan} onChange={setEnergyValue("hasMaintenancePlan")} />
+                      <span>توجد خطة صيانة دورية</span>
+                    </label>
+                    <label className="confirm compact-confirm">
+                      <input type="checkbox" checked={energyForm.previousLosses} onChange={setEnergyValue("previousLosses")} />
+                      <span>توجد خسائر سابقة</span>
+                    </label>
+                    <FloatingField id="energy-riskDetails" label="تفاصيل المخاطر" value={energyForm.riskDetails} error={energyErrors.riskDetails} multiline rows={5} onChange={setEnergyValue("riskDetails")} />
+                    <FloatingField id="energy-notes" label="ملاحظات" value={energyForm.notes} error={energyErrors.notes} multiline rows={5} onChange={setEnergyValue("notes")} />
+                  </div>
+                </motion.section>
+
+                <motion.section className="panel review-panel" {...sectionAnimation}>
+                  <h2>مراجعة الطلب</h2>
+                  <div className="review-grid">
+                    <span>العميل</span>
+                    <strong>{energyForm.fullName || "-"}</strong>
+                    <span>المشروع</span>
+                    <strong>{energyForm.projectName || "-"}</strong>
+                    <span>نوع الطاقة</span>
+                    <strong>{energyForm.energyType || "-"}</strong>
+                    <span>مبلغ التأمين</span>
+                    <strong>{energyForm.totalSumInsured ? `${energyForm.totalSumInsured} ${energyForm.currency}` : "-"}</strong>
+                  </div>
+                  <label className={`confirm ${energyErrors.confirmed ? "field-error" : ""}`}>
+                    <input type="checkbox" checked={energyForm.confirmed} onChange={setEnergyValue("confirmed")} />
+                    <span>أؤكد صحة المعلومات وأوافق على إرسال طلب تأمين الطاقة إلى TRINSU.</span>
+                  </label>
+                  {energyErrors.confirmed ? <p className="error-text">{energyErrors.confirmed}</p> : null}
+                  {energySubmitError ? <p id="energy-submit-error" className="submit-error" role="alert">{energySubmitError}</p> : null}
+                  <button className="submit-button" type="submit" disabled={isEnergySubmitting}>
+                    {isEnergySubmitting ? <span className="spinner" aria-hidden="true" /> : <CheckCircle2 size={20} aria-hidden="true" />}
+                    {isEnergySubmitting ? "جاري الإرسال" : "إرسال طلب تأمين الطاقة"}
+                  </button>
+                </motion.section>
+
+                {energyRequest ? (
+                  <motion.section className="success-panel" role="status" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+                    <CheckCircle2 size={42} aria-hidden="true" />
+                    <h2>تم إرسال طلب تأمين الطاقة</h2>
+                    <p>تم تسجيل الطلب في نظام TRINSU بنجاح.</p>
+                    <div className="success-numbers">
+                      <div>
+                        <span>رقم الطلب</span>
+                        <strong>{energyRequest.requestNumber}</strong>
+                      </div>
+                      <div>
+                        <span>رقم التتبع</span>
+                        <strong>{energyRequest.trackingNumber}</strong>
+                      </div>
+                    </div>
+                    <div className="success-status">
+                      <span>الحالة</span>
+                      <strong>{energyRequest.status}</strong>
+                    </div>
+                    <div className="success-actions">
+                      <button className="submit-button" type="button" onClick={() => openTrackingRequest(energyRequest.trackingNumber)}>
+                        <MapPinned size={18} aria-hidden="true" />
+                        تتبع الطلب
+                      </button>
+                    </div>
+                  </motion.section>
+                ) : null}
+              </fieldset>
+            </form>
+          </>
+        ) : null}
         {showTravelPage ? (
           <>
             <motion.section className="engineering-hero travel-hero" {...sectionAnimation}>
               <div>
                 <span className="eyebrow">
                   <Plane size={18} aria-hidden="true" />
-                  تأمين السفر
+                  ØªØ£Ù…ÙŠÙ† Ø§Ù„Ø³ÙØ±
                 </span>
-                <h1>طلب تأمين سفر</h1>
-                <p>أدخل بيانات المسافر والوجهة وتواريخ الرحلة ونطاق التغطية ليتم تسجيل الطلب ومتابعته داخل النظام.</p>
+                <h1>Ø·Ù„Ø¨ ØªØ£Ù…ÙŠÙ† Ø³ÙØ±</h1>
+                <p>Ø£Ø¯Ø®Ù„ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ù…Ø³Ø§ÙØ± ÙˆØ§Ù„ÙˆØ¬Ù‡Ø© ÙˆØªÙˆØ§Ø±ÙŠØ® Ø§Ù„Ø±Ø­Ù„Ø© ÙˆÙ†Ø·Ø§Ù‚ Ø§Ù„ØªØºØ·ÙŠØ© Ù„ÙŠØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø·Ù„Ø¨ ÙˆÙ…ØªØ§Ø¨Ø¹ØªÙ‡ Ø¯Ø§Ø®Ù„ Ø§Ù„Ù†Ø¸Ø§Ù….</p>
               </div>
               <div className="engineering-metrics travel-metrics" aria-hidden="true">
                 <span>TRV</span>
@@ -1887,95 +2126,95 @@ function App() {
             <form id="travel-request-form" className="request-form" onSubmit={submitTravel} noValidate>
               <fieldset className="form-fieldset" disabled={isTravelSubmitting}>
                 <motion.section className="panel" {...sectionAnimation}>
-                  <h2>معلومات المسافر</h2>
+                  <h2>Ù…Ø¹Ù„ÙˆÙ…Ø§Øª Ø§Ù„Ù…Ø³Ø§ÙØ±</h2>
                   <div className="grid three">
-                    <FloatingField id="travel-fullName" label="الاسم الكامل" value={travelForm.fullName} error={travelErrors.fullName} required onChange={setTravelValue("fullName")} />
-                    <FloatingField id="travel-mobile" label="رقم الموبايل" value={travelForm.mobile} error={travelErrors.mobile} required inputMode="tel" onChange={setTravelValue("mobile")} />
-                    <FloatingField id="travel-email" label="البريد الإلكتروني" value={travelForm.email} error={travelErrors.email} type="email" onChange={setTravelValue("email")} />
-                    <FloatingField id="travel-nationalId" label="الرقم الوطني" value={travelForm.nationalId} error={travelErrors.nationalId} required onChange={setTravelValue("nationalId")} />
-                    <FloatingField id="travel-passportNumber" label="رقم الجواز" value={travelForm.passportNumber} error={travelErrors.passportNumber} required onChange={setTravelValue("passportNumber")} />
-                    <FloatingField id="travel-dateOfBirth" label="تاريخ الميلاد" value={travelForm.dateOfBirth} error={travelErrors.dateOfBirth} required type="date" onChange={setTravelValue("dateOfBirth")} />
-                    <FloatingField id="travel-city" label="المدينة" value={travelForm.city} error={travelErrors.city} required onChange={setTravelValue("city")} />
-                    <FloatingField id="travel-address" label="العنوان" value={travelForm.address} error={travelErrors.address} onChange={setTravelValue("address")} />
+                    <FloatingField id="travel-fullName" label="Ø§Ù„Ø§Ø³Ù… Ø§Ù„ÙƒØ§Ù…Ù„" value={travelForm.fullName} error={travelErrors.fullName} required onChange={setTravelValue("fullName")} />
+                    <FloatingField id="travel-mobile" label="Ø±Ù‚Ù… Ø§Ù„Ù…ÙˆØ¨Ø§ÙŠÙ„" value={travelForm.mobile} error={travelErrors.mobile} required inputMode="tel" onChange={setTravelValue("mobile")} />
+                    <FloatingField id="travel-email" label="Ø§Ù„Ø¨Ø±ÙŠØ¯ Ø§Ù„Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ" value={travelForm.email} error={travelErrors.email} type="email" onChange={setTravelValue("email")} />
+                    <FloatingField id="travel-nationalId" label="Ø§Ù„Ø±Ù‚Ù… Ø§Ù„ÙˆØ·Ù†ÙŠ" value={travelForm.nationalId} error={travelErrors.nationalId} required onChange={setTravelValue("nationalId")} />
+                    <FloatingField id="travel-passportNumber" label="Ø±Ù‚Ù… Ø§Ù„Ø¬ÙˆØ§Ø²" value={travelForm.passportNumber} error={travelErrors.passportNumber} required onChange={setTravelValue("passportNumber")} />
+                    <FloatingField id="travel-dateOfBirth" label="ØªØ§Ø±ÙŠØ® Ø§Ù„Ù…ÙŠÙ„Ø§Ø¯" value={travelForm.dateOfBirth} error={travelErrors.dateOfBirth} required type="date" onChange={setTravelValue("dateOfBirth")} />
+                    <FloatingField id="travel-city" label="Ø§Ù„Ù…Ø¯ÙŠÙ†Ø©" value={travelForm.city} error={travelErrors.city} required onChange={setTravelValue("city")} />
+                    <FloatingField id="travel-address" label="Ø§Ù„Ø¹Ù†ÙˆØ§Ù†" value={travelForm.address} error={travelErrors.address} onChange={setTravelValue("address")} />
                   </div>
                 </motion.section>
 
                 <motion.section className="panel" {...sectionAnimation}>
-                  <h2>تفاصيل الرحلة</h2>
+                  <h2>ØªÙØ§ØµÙŠÙ„ Ø§Ù„Ø±Ø­Ù„Ø©</h2>
                   <div className="grid three">
-                    <FloatingField id="travel-destinationCountry" label="بلد الوجهة" value={travelForm.destinationCountry} error={travelErrors.destinationCountry} required onChange={setTravelValue("destinationCountry")} />
-                    <FloatingField id="travel-departureDate" label="تاريخ المغادرة" value={travelForm.departureDate} error={travelErrors.departureDate} required type="date" onChange={setTravelValue("departureDate")} />
-                    <FloatingField id="travel-returnDate" label="تاريخ العودة" value={travelForm.returnDate} error={travelErrors.returnDate} required type="date" onChange={setTravelValue("returnDate")} />
-                    <FloatingField id="travel-travelersCount" label="عدد المسافرين" value={travelForm.travelersCount} error={travelErrors.travelersCount} required inputMode="numeric" onChange={setTravelValue("travelersCount")} />
-                    <FloatingField id="travel-tripPurpose" label="غرض السفر" value={travelForm.tripPurpose} error={travelErrors.tripPurpose} required onChange={setTravelValue("tripPurpose")} />
-                    <FloatingField id="travel-coverageType" label="نوع التغطية" value={travelForm.coverageType} error={travelErrors.coverageType} required onChange={setTravelValue("coverageType")} />
-                    <FloatingField id="travel-coverageScope" label="نطاق التغطية" value={travelForm.coverageScope} error={travelErrors.coverageScope} required onChange={setTravelValue("coverageScope")} />
-                    <FloatingField id="travel-estimatedPremium" label="القسط المتوقع" value={travelForm.estimatedPremium} error={travelErrors.estimatedPremium} inputMode="decimal" onChange={setTravelValue("estimatedPremium")} />
-                    <FloatingField id="travel-currency" label="العملة" value={travelForm.currency} error={travelErrors.currency} required onChange={setTravelValue("currency")} />
+                    <FloatingField id="travel-destinationCountry" label="Ø¨Ù„Ø¯ Ø§Ù„ÙˆØ¬Ù‡Ø©" value={travelForm.destinationCountry} error={travelErrors.destinationCountry} required onChange={setTravelValue("destinationCountry")} />
+                    <FloatingField id="travel-departureDate" label="ØªØ§Ø±ÙŠØ® Ø§Ù„Ù…ØºØ§Ø¯Ø±Ø©" value={travelForm.departureDate} error={travelErrors.departureDate} required type="date" onChange={setTravelValue("departureDate")} />
+                    <FloatingField id="travel-returnDate" label="ØªØ§Ø±ÙŠØ® Ø§Ù„Ø¹ÙˆØ¯Ø©" value={travelForm.returnDate} error={travelErrors.returnDate} required type="date" onChange={setTravelValue("returnDate")} />
+                    <FloatingField id="travel-travelersCount" label="Ø¹Ø¯Ø¯ Ø§Ù„Ù…Ø³Ø§ÙØ±ÙŠÙ†" value={travelForm.travelersCount} error={travelErrors.travelersCount} required inputMode="numeric" onChange={setTravelValue("travelersCount")} />
+                    <FloatingField id="travel-tripPurpose" label="ØºØ±Ø¶ Ø§Ù„Ø³ÙØ±" value={travelForm.tripPurpose} error={travelErrors.tripPurpose} required onChange={setTravelValue("tripPurpose")} />
+                    <FloatingField id="travel-coverageType" label="Ù†ÙˆØ¹ Ø§Ù„ØªØºØ·ÙŠØ©" value={travelForm.coverageType} error={travelErrors.coverageType} required onChange={setTravelValue("coverageType")} />
+                    <FloatingField id="travel-coverageScope" label="Ù†Ø·Ø§Ù‚ Ø§Ù„ØªØºØ·ÙŠØ©" value={travelForm.coverageScope} error={travelErrors.coverageScope} required onChange={setTravelValue("coverageScope")} />
+                    <FloatingField id="travel-estimatedPremium" label="Ø§Ù„Ù‚Ø³Ø· Ø§Ù„Ù…ØªÙˆÙ‚Ø¹" value={travelForm.estimatedPremium} error={travelErrors.estimatedPremium} inputMode="decimal" onChange={setTravelValue("estimatedPremium")} />
+                    <FloatingField id="travel-currency" label="Ø§Ù„Ø¹Ù…Ù„Ø©" value={travelForm.currency} error={travelErrors.currency} required onChange={setTravelValue("currency")} />
                   </div>
                 </motion.section>
 
                 <motion.section className="panel" {...sectionAnimation}>
-                  <h2>الصحة والطوارئ</h2>
+                  <h2>Ø§Ù„ØµØ­Ø© ÙˆØ§Ù„Ø·ÙˆØ§Ø±Ø¦</h2>
                   <div className="grid two">
                     <label className="confirm compact-confirm">
                       <input type="checkbox" checked={travelForm.hasMedicalConditions} onChange={setTravelValue("hasMedicalConditions")} />
-                      <span>توجد حالات طبية أو أمراض مزمنة</span>
+                      <span>ØªÙˆØ¬Ø¯ Ø­Ø§Ù„Ø§Øª Ø·Ø¨ÙŠØ© Ø£Ùˆ Ø£Ù…Ø±Ø§Ø¶ Ù…Ø²Ù…Ù†Ø©</span>
                     </label>
-                    <FloatingField id="travel-emergencyContactName" label="اسم جهة الطوارئ" value={travelForm.emergencyContactName} error={travelErrors.emergencyContactName} onChange={setTravelValue("emergencyContactName")} />
-                    <FloatingField id="travel-emergencyContactPhone" label="هاتف جهة الطوارئ" value={travelForm.emergencyContactPhone} error={travelErrors.emergencyContactPhone} inputMode="tel" onChange={setTravelValue("emergencyContactPhone")} />
-                    <FloatingField id="travel-medicalConditions" label="تفاصيل الحالات الطبية" value={travelForm.medicalConditions} error={travelErrors.medicalConditions} multiline rows={5} onChange={setTravelValue("medicalConditions")} />
-                    <FloatingField id="travel-notes" label="ملاحظات" value={travelForm.notes} error={travelErrors.notes} multiline rows={5} onChange={setTravelValue("notes")} />
+                    <FloatingField id="travel-emergencyContactName" label="Ø§Ø³Ù… Ø¬Ù‡Ø© Ø§Ù„Ø·ÙˆØ§Ø±Ø¦" value={travelForm.emergencyContactName} error={travelErrors.emergencyContactName} onChange={setTravelValue("emergencyContactName")} />
+                    <FloatingField id="travel-emergencyContactPhone" label="Ù‡Ø§ØªÙ Ø¬Ù‡Ø© Ø§Ù„Ø·ÙˆØ§Ø±Ø¦" value={travelForm.emergencyContactPhone} error={travelErrors.emergencyContactPhone} inputMode="tel" onChange={setTravelValue("emergencyContactPhone")} />
+                    <FloatingField id="travel-medicalConditions" label="ØªÙØ§ØµÙŠÙ„ Ø§Ù„Ø­Ø§Ù„Ø§Øª Ø§Ù„Ø·Ø¨ÙŠØ©" value={travelForm.medicalConditions} error={travelErrors.medicalConditions} multiline rows={5} onChange={setTravelValue("medicalConditions")} />
+                    <FloatingField id="travel-notes" label="Ù…Ù„Ø§Ø­Ø¸Ø§Øª" value={travelForm.notes} error={travelErrors.notes} multiline rows={5} onChange={setTravelValue("notes")} />
                   </div>
                 </motion.section>
 
                 <motion.section className="panel review-panel" {...sectionAnimation}>
-                  <h2>مراجعة الطلب</h2>
+                  <h2>Ù…Ø±Ø§Ø¬Ø¹Ø© Ø§Ù„Ø·Ù„Ø¨</h2>
                   <div className="review-grid">
-                    <span>المسافر</span>
+                    <span>Ø§Ù„Ù…Ø³Ø§ÙØ±</span>
                     <strong>{travelForm.fullName || "-"}</strong>
-                    <span>الوجهة</span>
+                    <span>Ø§Ù„ÙˆØ¬Ù‡Ø©</span>
                     <strong>{travelForm.destinationCountry || "-"}</strong>
-                    <span>مدة الرحلة</span>
+                    <span>Ù…Ø¯Ø© Ø§Ù„Ø±Ø­Ù„Ø©</span>
                     <strong>{[travelForm.departureDate, travelForm.returnDate].filter(Boolean).join(" - ") || "-"}</strong>
-                    <span>نوع التغطية</span>
+                    <span>Ù†ÙˆØ¹ Ø§Ù„ØªØºØ·ÙŠØ©</span>
                     <strong>{travelForm.coverageType || "-"}</strong>
                   </div>
                   <label className={`confirm ${travelErrors.confirmed ? "field-error" : ""}`}>
                     <input type="checkbox" checked={travelForm.confirmed} onChange={setTravelValue("confirmed")} />
-                    <span>أؤكد صحة المعلومات وأوافق على إرسال طلب تأمين السفر إلى TRINSU.</span>
+                    <span>Ø£Ø¤ÙƒØ¯ ØµØ­Ø© Ø§Ù„Ù…Ø¹Ù„ÙˆÙ…Ø§Øª ÙˆØ£ÙˆØ§ÙÙ‚ Ø¹Ù„Ù‰ Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨ ØªØ£Ù…ÙŠÙ† Ø§Ù„Ø³ÙØ± Ø¥Ù„Ù‰ TRINSU.</span>
                   </label>
                   {travelErrors.confirmed ? <p className="error-text">{travelErrors.confirmed}</p> : null}
                   {travelSubmitError ? <p id="travel-submit-error" className="submit-error" role="alert">{travelSubmitError}</p> : null}
                   <button className="submit-button" type="submit" disabled={isTravelSubmitting}>
                     {isTravelSubmitting ? <span className="spinner" aria-hidden="true" /> : <CheckCircle2 size={20} aria-hidden="true" />}
-                    {isTravelSubmitting ? "جاري الإرسال" : "إرسال طلب تأمين السفر"}
+                    {isTravelSubmitting ? "Ø¬Ø§Ø±ÙŠ Ø§Ù„Ø¥Ø±Ø³Ø§Ù„" : "Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨ ØªØ£Ù…ÙŠÙ† Ø§Ù„Ø³ÙØ±"}
                   </button>
                 </motion.section>
 
                 {travelRequest ? (
                   <motion.section className="success-panel" role="status" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
                     <CheckCircle2 size={42} aria-hidden="true" />
-                    <h2>تم إرسال طلب تأمين السفر</h2>
-                    <p>تم تسجيل الطلب في نظام TRINSU بنجاح.</p>
+                    <h2>ØªÙ… Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨ ØªØ£Ù…ÙŠÙ† Ø§Ù„Ø³ÙØ±</h2>
+                    <p>ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø·Ù„Ø¨ ÙÙŠ Ù†Ø¸Ø§Ù… TRINSU Ø¨Ù†Ø¬Ø§Ø­.</p>
                     <div className="success-numbers">
                       <div>
-                        <span>رقم الطلب</span>
+                        <span>Ø±Ù‚Ù… Ø§Ù„Ø·Ù„Ø¨</span>
                         <strong>{travelRequest.requestNumber}</strong>
                       </div>
                       <div>
-                        <span>رقم التتبع</span>
+                        <span>Ø±Ù‚Ù… Ø§Ù„ØªØªØ¨Ø¹</span>
                         <strong>{travelRequest.trackingNumber}</strong>
                       </div>
                     </div>
                     <div className="success-status">
-                      <span>الحالة</span>
+                      <span>Ø§Ù„Ø­Ø§Ù„Ø©</span>
                       <strong>{travelRequest.status}</strong>
                     </div>
                     <div className="success-actions">
                       <button className="submit-button" type="button" onClick={() => openTrackingRequest(travelRequest.trackingNumber)}>
                         <MapPinned size={18} aria-hidden="true" />
-                        تتبع الطلب
+                        ØªØªØ¨Ø¹ Ø§Ù„Ø·Ù„Ø¨
                       </button>
                     </div>
                   </motion.section>
@@ -1991,10 +2230,10 @@ function App() {
               <div>
                 <span className="eyebrow">
                   <Truck size={18} aria-hidden="true" />
-                  تأمين النقل
+                  ØªØ£Ù…ÙŠÙ† Ø§Ù„Ù†Ù‚Ù„
                 </span>
-                <h1>طلب تأمين نقل</h1>
-                <p>أدخل بيانات العميل والشحنة ومسار النقل ونطاق التغطية ليتم تسجيل الطلب ومتابعته داخل نظام TRINSU.</p>
+                <h1>Ø·Ù„Ø¨ ØªØ£Ù…ÙŠÙ† Ù†Ù‚Ù„</h1>
+                <p>Ø£Ø¯Ø®Ù„ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø¹Ù…ÙŠÙ„ ÙˆØ§Ù„Ø´Ø­Ù†Ø© ÙˆÙ…Ø³Ø§Ø± Ø§Ù„Ù†Ù‚Ù„ ÙˆÙ†Ø·Ø§Ù‚ Ø§Ù„ØªØºØ·ÙŠØ© Ù„ÙŠØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø·Ù„Ø¨ ÙˆÙ…ØªØ§Ø¨Ø¹ØªÙ‡ Ø¯Ø§Ø®Ù„ Ù†Ø¸Ø§Ù… TRINSU.</p>
               </div>
               <div className="engineering-metrics" aria-hidden="true">
                 <span>TRN</span>
@@ -2006,19 +2245,19 @@ function App() {
             <form id="transport-request-form" className="request-form" onSubmit={submitTransport} noValidate>
               <fieldset className="form-fieldset" disabled={isTransportSubmitting}>
                 <motion.section className="panel" {...sectionAnimation}>
-                  <h2>معلومات العميل</h2>
+                  <h2>Ù…Ø¹Ù„ÙˆÙ…Ø§Øª Ø§Ù„Ø¹Ù…ÙŠÙ„</h2>
                   <div className="grid three">
-                    <FloatingField id="transport-fullName" label="الاسم الكامل" value={transportForm.fullName} error={transportErrors.fullName} required onChange={setTransportValue("fullName")} />
-                    <FloatingField id="transport-mobile" label="رقم الموبايل" value={transportForm.mobile} error={transportErrors.mobile} required inputMode="tel" onChange={setTransportValue("mobile")} />
-                    <FloatingField id="transport-email" label="البريد الإلكتروني" value={transportForm.email} error={transportErrors.email} type="email" onChange={setTransportValue("email")} />
-                    <FloatingField id="transport-nationalId" label="الرقم الوطني" value={transportForm.nationalId} error={transportErrors.nationalId} required onChange={setTransportValue("nationalId")} />
-                    <FloatingField id="transport-city" label="المدينة" value={transportForm.city} error={transportErrors.city} required onChange={setTransportValue("city")} />
-                    <FloatingField id="transport-address" label="العنوان" value={transportForm.address} error={transportErrors.address} onChange={setTransportValue("address")} />
+                    <FloatingField id="transport-fullName" label="Ø§Ù„Ø§Ø³Ù… Ø§Ù„ÙƒØ§Ù…Ù„" value={transportForm.fullName} error={transportErrors.fullName} required onChange={setTransportValue("fullName")} />
+                    <FloatingField id="transport-mobile" label="Ø±Ù‚Ù… Ø§Ù„Ù…ÙˆØ¨Ø§ÙŠÙ„" value={transportForm.mobile} error={transportErrors.mobile} required inputMode="tel" onChange={setTransportValue("mobile")} />
+                    <FloatingField id="transport-email" label="Ø§Ù„Ø¨Ø±ÙŠØ¯ Ø§Ù„Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ" value={transportForm.email} error={transportErrors.email} type="email" onChange={setTransportValue("email")} />
+                    <FloatingField id="transport-nationalId" label="Ø§Ù„Ø±Ù‚Ù… Ø§Ù„ÙˆØ·Ù†ÙŠ" value={transportForm.nationalId} error={transportErrors.nationalId} required onChange={setTransportValue("nationalId")} />
+                    <FloatingField id="transport-city" label="Ø§Ù„Ù…Ø¯ÙŠÙ†Ø©" value={transportForm.city} error={transportErrors.city} required onChange={setTransportValue("city")} />
+                    <FloatingField id="transport-address" label="Ø§Ù„Ø¹Ù†ÙˆØ§Ù†" value={transportForm.address} error={transportErrors.address} onChange={setTransportValue("address")} />
                   </div>
                 </motion.section>
 
                 <motion.section className="panel" {...sectionAnimation}>
-                  <h2>تفاصيل الشحنة</h2>
+                  <h2>ØªÙØ§ØµÙŠÙ„ Ø§Ù„Ø´Ø­Ù†Ø©</h2>
                   <div className="grid three">
                     <label className="floating-field">
                       <select id="transport-transportMode" value={transportForm.transportMode} onChange={setTransportValue("transportMode")} required>
@@ -2026,94 +2265,94 @@ function App() {
                         <option value="AIR">AIR</option>
                         <option value="LAND">LAND</option>
                       </select>
-                      <span>نوع النقل</span>
+                      <span>Ù†ÙˆØ¹ Ø§Ù„Ù†Ù‚Ù„</span>
                     </label>
-                    <FloatingField id="transport-cargoDescription" label="وصف الشحنة" value={transportForm.cargoDescription} error={transportErrors.cargoDescription} required onChange={setTransportValue("cargoDescription")} />
-                    <FloatingField id="transport-cargoValue" label="قيمة الشحنة" value={transportForm.cargoValue} error={transportErrors.cargoValue} required inputMode="decimal" onChange={setTransportValue("cargoValue")} />
-                    <FloatingField id="transport-currency" label="العملة" value={transportForm.currency} error={transportErrors.currency} required onChange={setTransportValue("currency")} />
-                    <FloatingField id="transport-packingType" label="نوع التغليف" value={transportForm.packingType} error={transportErrors.packingType} onChange={setTransportValue("packingType")} />
-                    <FloatingField id="transport-coverageScope" label="نطاق التغطية" value={transportForm.coverageScope} error={transportErrors.coverageScope} required onChange={setTransportValue("coverageScope")} />
-                    <FloatingField id="transport-estimatedPremium" label="القسط المتوقع" value={transportForm.estimatedPremium} error={transportErrors.estimatedPremium} inputMode="decimal" onChange={setTransportValue("estimatedPremium")} />
+                    <FloatingField id="transport-cargoDescription" label="ÙˆØµÙ Ø§Ù„Ø´Ø­Ù†Ø©" value={transportForm.cargoDescription} error={transportErrors.cargoDescription} required onChange={setTransportValue("cargoDescription")} />
+                    <FloatingField id="transport-cargoValue" label="Ù‚ÙŠÙ…Ø© Ø§Ù„Ø´Ø­Ù†Ø©" value={transportForm.cargoValue} error={transportErrors.cargoValue} required inputMode="decimal" onChange={setTransportValue("cargoValue")} />
+                    <FloatingField id="transport-currency" label="Ø§Ù„Ø¹Ù…Ù„Ø©" value={transportForm.currency} error={transportErrors.currency} required onChange={setTransportValue("currency")} />
+                    <FloatingField id="transport-packingType" label="Ù†ÙˆØ¹ Ø§Ù„ØªØºÙ„ÙŠÙ" value={transportForm.packingType} error={transportErrors.packingType} onChange={setTransportValue("packingType")} />
+                    <FloatingField id="transport-coverageScope" label="Ù†Ø·Ø§Ù‚ Ø§Ù„ØªØºØ·ÙŠØ©" value={transportForm.coverageScope} error={transportErrors.coverageScope} required onChange={setTransportValue("coverageScope")} />
+                    <FloatingField id="transport-estimatedPremium" label="Ø§Ù„Ù‚Ø³Ø· Ø§Ù„Ù…ØªÙˆÙ‚Ø¹" value={transportForm.estimatedPremium} error={transportErrors.estimatedPremium} inputMode="decimal" onChange={setTransportValue("estimatedPremium")} />
                   </div>
                 </motion.section>
 
                 <motion.section className="panel" {...sectionAnimation}>
-                  <h2>مسار النقل</h2>
+                  <h2>Ù…Ø³Ø§Ø± Ø§Ù„Ù†Ù‚Ù„</h2>
                   <div className="grid three">
-                    <FloatingField id="transport-originCountry" label="بلد الانطلاق" value={transportForm.originCountry} error={transportErrors.originCountry} required onChange={setTransportValue("originCountry")} />
-                    <FloatingField id="transport-originCity" label="مدينة الانطلاق" value={transportForm.originCity} error={transportErrors.originCity} required onChange={setTransportValue("originCity")} />
-                    <FloatingField id="transport-destinationCountry" label="بلد الوصول" value={transportForm.destinationCountry} error={transportErrors.destinationCountry} required onChange={setTransportValue("destinationCountry")} />
-                    <FloatingField id="transport-destinationCity" label="مدينة الوصول" value={transportForm.destinationCity} error={transportErrors.destinationCity} required onChange={setTransportValue("destinationCity")} />
-                    <FloatingField id="transport-departureDate" label="تاريخ الانطلاق" value={transportForm.departureDate} error={transportErrors.departureDate} required type="date" onChange={setTransportValue("departureDate")} />
-                    <FloatingField id="transport-arrivalDate" label="تاريخ الوصول" value={transportForm.arrivalDate} error={transportErrors.arrivalDate} type="date" onChange={setTransportValue("arrivalDate")} />
-                    <FloatingField id="transport-carrierName" label="اسم الناقل" value={transportForm.carrierName} error={transportErrors.carrierName} onChange={setTransportValue("carrierName")} />
-                    <FloatingField id="transport-vesselOrFlightNumber" label="رقم السفينة/الرحلة" value={transportForm.vesselOrFlightNumber} error={transportErrors.vesselOrFlightNumber} onChange={setTransportValue("vesselOrFlightNumber")} />
-                    <FloatingField id="transport-vehicleOrContainerNo" label="رقم المركبة/الحاوية" value={transportForm.vehicleOrContainerNo} error={transportErrors.vehicleOrContainerNo} onChange={setTransportValue("vehicleOrContainerNo")} />
+                    <FloatingField id="transport-originCountry" label="Ø¨Ù„Ø¯ Ø§Ù„Ø§Ù†Ø·Ù„Ø§Ù‚" value={transportForm.originCountry} error={transportErrors.originCountry} required onChange={setTransportValue("originCountry")} />
+                    <FloatingField id="transport-originCity" label="Ù…Ø¯ÙŠÙ†Ø© Ø§Ù„Ø§Ù†Ø·Ù„Ø§Ù‚" value={transportForm.originCity} error={transportErrors.originCity} required onChange={setTransportValue("originCity")} />
+                    <FloatingField id="transport-destinationCountry" label="Ø¨Ù„Ø¯ Ø§Ù„ÙˆØµÙˆÙ„" value={transportForm.destinationCountry} error={transportErrors.destinationCountry} required onChange={setTransportValue("destinationCountry")} />
+                    <FloatingField id="transport-destinationCity" label="Ù…Ø¯ÙŠÙ†Ø© Ø§Ù„ÙˆØµÙˆÙ„" value={transportForm.destinationCity} error={transportErrors.destinationCity} required onChange={setTransportValue("destinationCity")} />
+                    <FloatingField id="transport-departureDate" label="ØªØ§Ø±ÙŠØ® Ø§Ù„Ø§Ù†Ø·Ù„Ø§Ù‚" value={transportForm.departureDate} error={transportErrors.departureDate} required type="date" onChange={setTransportValue("departureDate")} />
+                    <FloatingField id="transport-arrivalDate" label="ØªØ§Ø±ÙŠØ® Ø§Ù„ÙˆØµÙˆÙ„" value={transportForm.arrivalDate} error={transportErrors.arrivalDate} type="date" onChange={setTransportValue("arrivalDate")} />
+                    <FloatingField id="transport-carrierName" label="Ø§Ø³Ù… Ø§Ù„Ù†Ø§Ù‚Ù„" value={transportForm.carrierName} error={transportErrors.carrierName} onChange={setTransportValue("carrierName")} />
+                    <FloatingField id="transport-vesselOrFlightNumber" label="Ø±Ù‚Ù… Ø§Ù„Ø³ÙÙŠÙ†Ø©/Ø§Ù„Ø±Ø­Ù„Ø©" value={transportForm.vesselOrFlightNumber} error={transportErrors.vesselOrFlightNumber} onChange={setTransportValue("vesselOrFlightNumber")} />
+                    <FloatingField id="transport-vehicleOrContainerNo" label="Ø±Ù‚Ù… Ø§Ù„Ù…Ø±ÙƒØ¨Ø©/Ø§Ù„Ø­Ø§ÙˆÙŠØ©" value={transportForm.vehicleOrContainerNo} error={transportErrors.vehicleOrContainerNo} onChange={setTransportValue("vehicleOrContainerNo")} />
                   </div>
                 </motion.section>
 
                 <motion.section className="panel" {...sectionAnimation}>
-                  <h2>المخاطر والملاحظات</h2>
+                  <h2>Ø§Ù„Ù…Ø®Ø§Ø·Ø± ÙˆØ§Ù„Ù…Ù„Ø§Ø­Ø¸Ø§Øª</h2>
                   <div className="grid two">
                     <label className="confirm compact-confirm">
                       <input type="checkbox" checked={transportForm.hasWarRisk} onChange={setTransportValue("hasWarRisk")} />
-                      <span>إضافة خطر الحرب</span>
+                      <span>Ø¥Ø¶Ø§ÙØ© Ø®Ø·Ø± Ø§Ù„Ø­Ø±Ø¨</span>
                     </label>
                     <label className="confirm compact-confirm">
                       <input type="checkbox" checked={transportForm.hasStrikeRisk} onChange={setTransportValue("hasStrikeRisk")} />
-                      <span>إضافة خطر الإضرابات</span>
+                      <span>Ø¥Ø¶Ø§ÙØ© Ø®Ø·Ø± Ø§Ù„Ø¥Ø¶Ø±Ø§Ø¨Ø§Øª</span>
                     </label>
-                    <FloatingField id="transport-notes" label="ملاحظات" value={transportForm.notes} error={transportErrors.notes} multiline rows={5} onChange={setTransportValue("notes")} />
+                    <FloatingField id="transport-notes" label="Ù…Ù„Ø§Ø­Ø¸Ø§Øª" value={transportForm.notes} error={transportErrors.notes} multiline rows={5} onChange={setTransportValue("notes")} />
                   </div>
                 </motion.section>
 
                 <motion.section className="panel review-panel" {...sectionAnimation}>
-                  <h2>مراجعة الطلب</h2>
+                  <h2>Ù…Ø±Ø§Ø¬Ø¹Ø© Ø§Ù„Ø·Ù„Ø¨</h2>
                   <div className="review-grid">
-                    <span>العميل</span>
+                    <span>Ø§Ù„Ø¹Ù…ÙŠÙ„</span>
                     <strong>{transportForm.fullName || "-"}</strong>
-                    <span>الشحنة</span>
+                    <span>Ø§Ù„Ø´Ø­Ù†Ø©</span>
                     <strong>{transportForm.cargoDescription || "-"}</strong>
-                    <span>المسار</span>
+                    <span>Ø§Ù„Ù…Ø³Ø§Ø±</span>
                     <strong>{[transportForm.originCity, transportForm.destinationCity].filter(Boolean).join(" - ") || "-"}</strong>
-                    <span>نوع النقل</span>
+                    <span>Ù†ÙˆØ¹ Ø§Ù„Ù†Ù‚Ù„</span>
                     <strong>{transportForm.transportMode || "-"}</strong>
                   </div>
                   <label className={`confirm ${transportErrors.confirmed ? "field-error" : ""}`}>
                     <input type="checkbox" checked={transportForm.confirmed} onChange={setTransportValue("confirmed")} />
-                    <span>أؤكد صحة المعلومات وأوافق على إرسال طلب تأمين النقل إلى TRINSU.</span>
+                    <span>Ø£Ø¤ÙƒØ¯ ØµØ­Ø© Ø§Ù„Ù…Ø¹Ù„ÙˆÙ…Ø§Øª ÙˆØ£ÙˆØ§ÙÙ‚ Ø¹Ù„Ù‰ Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨ ØªØ£Ù…ÙŠÙ† Ø§Ù„Ù†Ù‚Ù„ Ø¥Ù„Ù‰ TRINSU.</span>
                   </label>
                   {transportErrors.confirmed ? <p className="error-text">{transportErrors.confirmed}</p> : null}
                   {transportSubmitError ? <p id="transport-submit-error" className="submit-error" role="alert">{transportSubmitError}</p> : null}
                   <button className="submit-button" type="submit" disabled={isTransportSubmitting}>
                     {isTransportSubmitting ? <span className="spinner" aria-hidden="true" /> : <CheckCircle2 size={20} aria-hidden="true" />}
-                    {isTransportSubmitting ? "جاري الإرسال" : "إرسال طلب تأمين النقل"}
+                    {isTransportSubmitting ? "Ø¬Ø§Ø±ÙŠ Ø§Ù„Ø¥Ø±Ø³Ø§Ù„" : "Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨ ØªØ£Ù…ÙŠÙ† Ø§Ù„Ù†Ù‚Ù„"}
                   </button>
                 </motion.section>
 
                 {transportRequest ? (
                   <motion.section className="success-panel" role="status" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
                     <CheckCircle2 size={42} aria-hidden="true" />
-                    <h2>تم إرسال طلب تأمين النقل</h2>
-                    <p>تم تسجيل الطلب في نظام TRINSU بنجاح.</p>
+                    <h2>ØªÙ… Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨ ØªØ£Ù…ÙŠÙ† Ø§Ù„Ù†Ù‚Ù„</h2>
+                    <p>ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø·Ù„Ø¨ ÙÙŠ Ù†Ø¸Ø§Ù… TRINSU Ø¨Ù†Ø¬Ø§Ø­.</p>
                     <div className="success-numbers">
                       <div>
-                        <span>رقم الطلب</span>
+                        <span>Ø±Ù‚Ù… Ø§Ù„Ø·Ù„Ø¨</span>
                         <strong>{transportRequest.requestNumber}</strong>
                       </div>
                       <div>
-                        <span>رقم التتبع</span>
+                        <span>Ø±Ù‚Ù… Ø§Ù„ØªØªØ¨Ø¹</span>
                         <strong>{transportRequest.trackingNumber}</strong>
                       </div>
                     </div>
                     <div className="success-status">
-                      <span>الحالة</span>
+                      <span>Ø§Ù„Ø­Ø§Ù„Ø©</span>
                       <strong>{transportRequest.status}</strong>
                     </div>
                     <div className="success-actions">
                       <button className="submit-button" type="button" onClick={() => openTrackingRequest(transportRequest.trackingNumber)}>
                         <MapPinned size={18} aria-hidden="true" />
-                        تتبع الطلب
+                        ØªØªØ¨Ø¹ Ø§Ù„Ø·Ù„Ø¨
                       </button>
                     </div>
                   </motion.section>
@@ -2203,7 +2442,7 @@ function App() {
         <motion.section className="motor-page-head" {...sectionAnimation}>
           <span className="eyebrow">
             <CarFront size={18} aria-hidden="true" />
-            طلب تأمين المركبات
+            Ø·Ù„Ø¨ ØªØ£Ù…ÙŠÙ† Ø§Ù„Ù…Ø±ÙƒØ¨Ø§Øª
           </span>
           <h1>{t.title}</h1>
           <p>{t.subtitle}</p>
@@ -2294,14 +2533,14 @@ function App() {
               {isSubmitting ? <span className="spinner" aria-hidden="true" /> : <CheckCircle2 size={20} aria-hidden="true" />}
               {isSubmitting ? t.submitLoading : t.submit}
             </button>
-            <aside className="fallback-card" aria-label="رابط بديل لتقديم طلب تأمين المركبات">
+            <aside className="fallback-card" aria-label="Ø±Ø§Ø¨Ø· Ø¨Ø¯ÙŠÙ„ Ù„ØªÙ‚Ø¯ÙŠÙ… Ø·Ù„Ø¨ ØªØ£Ù…ÙŠÙ† Ø§Ù„Ù…Ø±ÙƒØ¨Ø§Øª">
               <span className="fallback-icon">
                 <Info size={20} aria-hidden="true" />
               </span>
               <div className="fallback-content">
-                <p>في حال تعذر إرسال طلب التأمين عبر هذه الصفحة، يمكنك تقديم الطلب من خلال الرابط التالي:</p>
+                <p>ÙÙŠ Ø­Ø§Ù„ ØªØ¹Ø°Ø± Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨ Ø§Ù„ØªØ£Ù…ÙŠÙ† Ø¹Ø¨Ø± Ù‡Ø°Ù‡ Ø§Ù„ØµÙØ­Ø©ØŒ ÙŠÙ…ÙƒÙ†Ùƒ ØªÙ‚Ø¯ÙŠÙ… Ø§Ù„Ø·Ù„Ø¨ Ù…Ù† Ø®Ù„Ø§Ù„ Ø§Ù„Ø±Ø§Ø¨Ø· Ø§Ù„ØªØ§Ù„ÙŠ:</p>
                 <a className="fallback-link" href={fallbackFormUrl} target="_blank" rel="noopener noreferrer">
-                  طلبات تأمين المركبات
+                  Ø·Ù„Ø¨Ø§Øª ØªØ£Ù…ÙŠÙ† Ø§Ù„Ù…Ø±ÙƒØ¨Ø§Øª
                 </a>
               </div>
             </aside>
@@ -2330,11 +2569,11 @@ function App() {
               <div className="success-actions">
                 <button className="ghost-button" type="button" onClick={copyRequestNumber}>
                   <Copy size={18} aria-hidden="true" />
-                  {copiedRequestNumber ? (language === "ar" ? "تم النسخ" : "Copied") : language === "ar" ? "نسخ رقم الطلب" : "Copy request number"}
+                  {copiedRequestNumber ? (language === "ar" ? "ØªÙ… Ø§Ù„Ù†Ø³Ø®" : "Copied") : language === "ar" ? "Ù†Ø³Ø® Ø±Ù‚Ù… Ø§Ù„Ø·Ù„Ø¨" : "Copy request number"}
                 </button>
                 <button className="submit-button" type="button" onClick={downloadRequestPdf}>
                   <Download size={18} aria-hidden="true" />
-                  {language === "ar" ? "تنزيل الاستمارة PDF" : "Download PDF form"}
+                  {language === "ar" ? "ØªÙ†Ø²ÙŠÙ„ Ø§Ù„Ø§Ø³ØªÙ…Ø§Ø±Ø© PDF" : "Download PDF form"}
                 </button>
               </div>
               </motion.section>
@@ -2349,3 +2588,7 @@ function App() {
 }
 
 export default App;
+
+
+
+

@@ -1,4 +1,4 @@
-export type FormState = {
+﻿export type FormState = {
   fullName: string;
   phone: string;
   email: string;
@@ -158,6 +158,36 @@ export type TravelFormState = {
   confirmed: boolean;
 };
 
+export type EnergyFormState = {
+  fullName: string;
+  mobile: string;
+  email: string;
+  nationalId: string;
+  address: string;
+  city: string;
+  insuredName: string;
+  projectName: string;
+  energyType: string;
+  facilityType: string;
+  projectLocation: string;
+  projectCity: string;
+  operatorName: string;
+  contractorName: string;
+  capacityMw: string;
+  assetValue: string;
+  businessInterruptionLimit: string;
+  liabilityLimit: string;
+  totalSumInsured: string;
+  currency: string;
+  coverageScope: string;
+  riskDetails: string;
+  hasFireProtection: boolean;
+  hasMaintenancePlan: boolean;
+  previousLosses: boolean;
+  notes: string;
+  confirmed: boolean;
+};
+
 export type TransportFormState = {
   fullName: string;
   mobile: string;
@@ -186,3 +216,4 @@ export type TransportFormState = {
   notes: string;
   confirmed: boolean;
 };
+

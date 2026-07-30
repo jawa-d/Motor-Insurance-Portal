@@ -1,9 +1,7 @@
-import { upload } from "@vercel/blob/client";
+﻿import { upload } from "@vercel/blob/client";
 import type { DocumentKey, FormState, UploadFile } from "../types";
 import { ApiError, getJson, getPublicApiConfig, getSameOriginJson, postJson } from "./api";
-
 const uploadEndpoint = "/api/public/motor-request-uploads";
-
 const documentPayloadKeyMap: Record<DocumentKey, string> = {
   frontNationalId: "nationalIdFront",
   backNationalId: "nationalIdBack",
@@ -12,7 +10,6 @@ const documentPayloadKeyMap: Record<DocumentKey, string> = {
   frontResidenceCard: "residenceCardFront",
   backResidenceCard: "residenceCardBack",
 };
-
 type MotorRequestResponse = {
   trackingNumber?: string;
   requestNumber?: string;
@@ -29,7 +26,6 @@ type MotorRequestResponse = {
     requestNumber?: string;
   };
 };
-
 export type PublicMotorRequestStatus =
   | "SUBMITTED"
   | "RECEIVED"
@@ -39,7 +35,6 @@ export type PublicMotorRequestStatus =
   | "CONTACTING_CUSTOMER"
   | "COMPLETED"
   | "REJECTED";
-
 export type MotorRequestTracking = {
   trackingNumber: string;
   requestNumber: string;
@@ -49,7 +44,7 @@ export type MotorRequestTracking = {
   customerName: string;
   vehicle?: string;
   subject?: string;
-  requestType?: "motor" | "engineering" | "health" | "fireTheft" | "generalAccident" | "travel" | "transport" | "unknown";
+  requestType?: "motor" | "engineering" | "health" | "fireTheft" | "generalAccident" | "travel" | "transport" | "energy" | "unknown";
   project?: {
     name?: string;
     type?: string;
@@ -93,15 +88,21 @@ export type MotorRequestTracking = {
     destinationCountry?: string;
     destinationCity?: string;
   };
+  energy?: {
+    projectName?: string;
+    energyType?: string;
+    facilityType?: string;
+    projectCity?: string;
+    totalSumInsured?: number;
+    currency?: string;
+  };
 };
-
 export type MotorRequestInput = {
   form: FormState;
   vehicleImages: UploadFile[];
   documents: Partial<Record<DocumentKey, UploadFile>>;
   agentCode?: string;
 };
-
 export type MotorRequestUploadProgress = {
   completedFiles: number;
   currentFile: number;
@@ -109,11 +110,9 @@ export type MotorRequestUploadProgress = {
   percent: number;
   phase: "uploading" | "submitting";
 };
-
 type MotorRequestSubmitOptions = {
   onProgress?: (progress: MotorRequestUploadProgress) => void;
 };
-
 type UploadedFilePayload = {
   url: string;
   pathname: string;
@@ -121,64 +120,56 @@ type UploadedFilePayload = {
   contentType: string;
   size: number;
 };
-
 type SubmittedFilePayload = {
   url: string;
   name: string;
   type: string;
   size: number;
 };
-
 type SubmittedDocumentPayload = SubmittedFilePayload & {
   key: string;
 };
-
 const localizedDigitMap: Record<string, string> = {
-  "٠": "0",
-  "١": "1",
-  "٢": "2",
-  "٣": "3",
-  "٤": "4",
-  "٥": "5",
-  "٦": "6",
-  "٧": "7",
-  "٨": "8",
-  "٩": "9",
-  "۰": "0",
-  "۱": "1",
-  "۲": "2",
-  "۳": "3",
-  "۴": "4",
-  "۵": "5",
-  "۶": "6",
-  "۷": "7",
-  "۸": "8",
-  "۹": "9",
+  "Ù ": "0",
+  "Ù¡": "1",
+  "Ù¢": "2",
+  "Ù£": "3",
+  "Ù¤": "4",
+  "Ù¥": "5",
+  "Ù¦": "6",
+  "Ù§": "7",
+  "Ù¨": "8",
+  "Ù©": "9",
+  "Û°": "0",
+  "Û±": "1",
+  "Û²": "2",
+  "Û³": "3",
+  "Û´": "4",
+  "Ûµ": "5",
+  "Û¶": "6",
+  "Û·": "7",
+  "Û¸": "8",
+  "Û¹": "9",
 };
-
 function normalizeNumericInput(value: string) {
   return value
     .trim()
-    .replace(/[٠-٩۰-۹]/g, (digit) => localizedDigitMap[digit] ?? digit)
+    .replace(/[Ù -Ù©Û°-Û¹]/g, (digit) => localizedDigitMap[digit] ?? digit)
     .replace(/[\u066B\uFF0E]/g, ".")
     .replace(/[\u066C,_\s\u00A0\u202F]/g, "")
     .replace(/[^\d.+-]/g, "");
 }
-
 function toRequiredNumber(value: string, fieldName: string) {
   const numberValue = Number(normalizeNumericInput(value));
 
   if (!Number.isFinite(numberValue)) {
     throw new Error(`${fieldName} must be a valid number.`);
   }
-
   return numberValue;
 }
-
 function buildPayload({ form, agentCode }: Pick<MotorRequestInput, "form" | "agentCode">) {
   const manufacturingYear = toRequiredNumber(form.year, "vehicle.manufacturingYear");
   const estimatedVehicleValue = toRequiredNumber(form.estimatedValue, "vehicle.estimatedVehicleValue");
-
   return {
     customer: {
       fullName: form.fullName.trim(),
@@ -203,7 +194,6 @@ function buildPayload({ form, agentCode }: Pick<MotorRequestInput, "form" | "age
     ...(agentCode ? { agentCode } : {}),
   };
 }
-
 function sanitizeFilename(filename: string) {
   const cleanFilename = filename
     .normalize("NFKD")
@@ -211,19 +201,13 @@ function sanitizeFilename(filename: string) {
     .replace(/[^a-zA-Z0-9._-]/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "");
-
   return cleanFilename || "upload";
 }
-
-
-
 function createUploadPath(file: File) {
   const randomId = typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const safeFilename = sanitizeFilename(file.name);
-
   return `public-motor-requests/uploads/${randomId}-${safeFilename}`;
 }
-
 async function uploadMotorRequestFile(file: File, kind: "vehicleImage" | "document", key?: string): Promise<UploadedFilePayload> {
   const config = getPublicApiConfig();
   const contentType = file.type || "application/octet-stream";
@@ -243,7 +227,6 @@ async function uploadMotorRequestFile(file: File, kind: "vehicleImage" | "docume
     }),
     multipart: true,
   });
-
   return {
     url: blob.url,
     pathname: blob.pathname,
@@ -252,7 +235,6 @@ async function uploadMotorRequestFile(file: File, kind: "vehicleImage" | "docume
     size: file.size,
   };
 }
-
 function toSubmittedFilePayload(file: UploadedFilePayload): SubmittedFilePayload {
   return {
     url: file.url,
@@ -261,7 +243,6 @@ function toSubmittedFilePayload(file: UploadedFilePayload): SubmittedFilePayload
     size: file.size,
   };
 }
-
 function extractRequestNumber(response: MotorRequestResponse) {
   return (
     response.requestNumber ??
@@ -284,7 +265,7 @@ function normalizeTrackingResponse(response: MotorRequestTracking, requestType: 
   return {
     ...response,
     requestType,
-    subject: response.subject ?? response.vehicle ?? response.project?.name ?? response.health?.planType ?? response.property?.type ?? response.accident?.insuredName ?? response.travel?.destinationCountry ?? response.transport?.cargoDescription,
+    subject: response.subject ?? response.vehicle ?? response.project?.name ?? response.health?.planType ?? response.property?.type ?? response.accident?.insuredName ?? response.travel?.destinationCountry ?? response.transport?.cargoDescription ?? response.energy?.projectName,
   };
 }
 
@@ -468,6 +449,29 @@ export async function trackMotorRequest(trackingNumber: string) {
     }
 
     try {
+      const energyTracking = await getJson<MotorRequestTracking>(
+        `/api/v1/public/energy-requests/track/${encodedTrackingNumber}`,
+      );
+
+      return normalizeTrackingResponse(energyTracking, "energy");
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.status !== 404) {
+        throw error;
+      }
+    }
+
+    try {
+      const energyTracking = await getJson<MotorRequestTracking>(
+        `/api/v1/public/energy-requests/${encodedTrackingNumber}`,
+      );
+
+      return normalizeTrackingResponse(energyTracking, "energy");
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.status !== 404) {
+        throw error;
+      }
+    }
+    try {
       const travelTracking = await getJson<MotorRequestTracking>(
         `/api/v1/public/travel-requests/track/${encodedTrackingNumber}`,
       );
@@ -479,6 +483,29 @@ export async function trackMotorRequest(trackingNumber: string) {
       }
     }
 
+    try {
+      const energyTracking = await getJson<MotorRequestTracking>(
+        `/api/v1/public/energy-requests/track/${encodedTrackingNumber}`,
+      );
+
+      return normalizeTrackingResponse(energyTracking, "energy");
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.status !== 404) {
+        throw error;
+      }
+    }
+
+    try {
+      const energyTracking = await getJson<MotorRequestTracking>(
+        `/api/v1/public/energy-requests/${encodedTrackingNumber}`,
+      );
+
+      return normalizeTrackingResponse(energyTracking, "energy");
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.status !== 404) {
+        throw error;
+      }
+    }
     try {
       const travelTracking = await getJson<MotorRequestTracking>(
         `/api/v1/public/travel-requests/${encodedTrackingNumber}`,
@@ -512,3 +539,4 @@ export async function trackMotorRequest(trackingNumber: string) {
 
   return getSameOriginJson<MotorRequestTracking>(`/api/motor-request-track?trackingNumber=${encodedTrackingNumber}`);
 }
+

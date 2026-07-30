@@ -1,5 +1,5 @@
-import { z } from "zod";
-import type { EngineeringFormState, FireTheftFormState, FormState, GeneralAccidentFormState, HealthFormState, TransportFormState, TravelFormState } from "./types";
+﻿import { z } from "zod";
+import type { EnergyFormState, EngineeringFormState, FireTheftFormState, FormState, GeneralAccidentFormState, HealthFormState, TransportFormState, TravelFormState } from "./types";
 
 const requiredText = (message: string) => z.string().trim().min(1, message);
 
@@ -309,6 +309,68 @@ export const initialTravelForm: TravelFormState = {
   confirmed: false,
 };
 
+export const createEnergySchema = (messages: {
+  fieldRequired: string;
+}) =>
+  z.object({
+    fullName: requiredText(messages.fieldRequired),
+    mobile: requiredText(messages.fieldRequired),
+    email: z.string(),
+    nationalId: requiredText(messages.fieldRequired),
+    address: z.string(),
+    city: requiredText(messages.fieldRequired),
+    insuredName: requiredText(messages.fieldRequired),
+    projectName: requiredText(messages.fieldRequired),
+    energyType: requiredText(messages.fieldRequired),
+    facilityType: requiredText(messages.fieldRequired),
+    projectLocation: requiredText(messages.fieldRequired),
+    projectCity: requiredText(messages.fieldRequired),
+    operatorName: z.string(),
+    contractorName: z.string(),
+    capacityMw: z.string(),
+    assetValue: requiredText(messages.fieldRequired),
+    businessInterruptionLimit: z.string(),
+    liabilityLimit: z.string(),
+    totalSumInsured: requiredText(messages.fieldRequired),
+    currency: requiredText(messages.fieldRequired),
+    coverageScope: requiredText(messages.fieldRequired),
+    riskDetails: z.string(),
+    hasFireProtection: z.boolean(),
+    hasMaintenancePlan: z.boolean(),
+    previousLosses: z.boolean(),
+    notes: z.string(),
+    confirmed: z.boolean(),
+  });
+
+export const initialEnergyForm: EnergyFormState = {
+  fullName: "",
+  mobile: "",
+  email: "",
+  nationalId: "",
+  address: "",
+  city: "Baghdad",
+  insuredName: "",
+  projectName: "",
+  energyType: "Solar",
+  facilityType: "Power generation",
+  projectLocation: "",
+  projectCity: "Basra",
+  operatorName: "",
+  contractorName: "",
+  capacityMw: "",
+  assetValue: "",
+  businessInterruptionLimit: "",
+  liabilityLimit: "",
+  totalSumInsured: "",
+  currency: "IQD",
+  coverageScope: "Property damage and business interruption",
+  riskDetails: "",
+  hasFireProtection: false,
+  hasMaintenancePlan: false,
+  previousLosses: false,
+  notes: "",
+  confirmed: false,
+};
 export const createTransportSchema = (messages: {
   fieldRequired: string;
 }) =>
@@ -369,3 +431,4 @@ export const initialTransportForm: TransportFormState = {
   notes: "",
   confirmed: false,
 };
+
