@@ -85,6 +85,14 @@ export default async function handler(request, response) {
       url: `${baseUrl}/api/v1/public/general-accident-requests/${encodedTrackingNumber}`,
     },
     {
+      type: "energy",
+      url: `${baseUrl}/api/v1/public/energy-requests/track/${encodedTrackingNumber}`,
+    },
+    {
+      type: "energy",
+      url: `${baseUrl}/api/v1/public/energy-requests/${encodedTrackingNumber}`,
+    },
+    {
       type: "travel",
       url: `${baseUrl}/api/v1/public/travel-requests/track/${encodedTrackingNumber}`,
     },
