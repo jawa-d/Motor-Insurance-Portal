@@ -1853,10 +1853,10 @@ function App() {
               <div>
                 <span className="eyebrow">
                   <ShieldAlert size={18} aria-hidden="true" />
-                  ØªØ£Ù…ÙŠÙ† Ø§Ù„Ø­ÙˆØ§Ø¯Ø« Ø§Ù„Ø¹Ø§Ù…Ø©
+                  تأمين الحوادث العامة
                 </span>
-                <h1>Ø·Ù„Ø¨ ØªØ£Ù…ÙŠÙ† Ø­ÙˆØ§Ø¯Ø« Ø¹Ø§Ù…Ø©</h1>
-                <p>Ø£Ø¯Ø®Ù„ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø¹Ù…ÙŠÙ„ ÙˆØ§Ù„Ù†Ø´Ø§Ø· ÙˆÙ…ÙˆÙ‚Ø¹ Ø§Ù„Ø®Ø·Ø± ÙˆØ­Ø¯ÙˆØ¯ Ø§Ù„ØªØºØ·ÙŠØ© Ù„ÙŠØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø·Ù„Ø¨ ÙˆÙ…ØªØ§Ø¨Ø¹ØªÙ‡ Ø¯Ø§Ø®Ù„ Ø§Ù„Ù†Ø¸Ø§Ù….</p>
+                <h1>طلب تأمين حوادث عامة</h1>
+                <p>أدخل بيانات العميل ونشاط العمل وموقع الخطر وحدود التغطية ليتم تسجيل الطلب ومتابعته داخل نظام TRINSU.</p>
               </div>
               <div className="engineering-metrics general-accident-metrics" aria-hidden="true">
                 <span>GAC</span>
@@ -1868,102 +1868,79 @@ function App() {
             <form id="general-accident-request-form" className="request-form" onSubmit={submitGeneralAccident} noValidate>
               <fieldset className="form-fieldset" disabled={isGeneralAccidentSubmitting}>
                 <motion.section className="panel" {...sectionAnimation}>
-                  <h2>Ù…Ø¹Ù„ÙˆÙ…Ø§Øª Ø§Ù„Ø¹Ù…ÙŠÙ„</h2>
+                  <h2>معلومات العميل</h2>
                   <div className="grid three">
-                    <FloatingField id="gac-fullName" label="Ø§Ù„Ø§Ø³Ù… Ø§Ù„ÙƒØ§Ù…Ù„" value={generalAccidentForm.fullName} error={generalAccidentErrors.fullName} required onChange={setGeneralAccidentValue("fullName")} />
-                    <FloatingField id="gac-mobile" label="Ø±Ù‚Ù… Ø§Ù„Ù…ÙˆØ¨Ø§ÙŠÙ„" value={generalAccidentForm.mobile} error={generalAccidentErrors.mobile} required inputMode="tel" onChange={setGeneralAccidentValue("mobile")} />
-                    <FloatingField id="gac-email" label="Ø§Ù„Ø¨Ø±ÙŠØ¯ Ø§Ù„Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ" value={generalAccidentForm.email} error={generalAccidentErrors.email} type="email" onChange={setGeneralAccidentValue("email")} />
-                    <FloatingField id="gac-nationalId" label="Ø§Ù„Ø±Ù‚Ù… Ø§Ù„ÙˆØ·Ù†ÙŠ" value={generalAccidentForm.nationalId} error={generalAccidentErrors.nationalId} required onChange={setGeneralAccidentValue("nationalId")} />
-                    <FloatingField id="gac-city" label="Ø§Ù„Ù…Ø¯ÙŠÙ†Ø©" value={generalAccidentForm.city} error={generalAccidentErrors.city} required onChange={setGeneralAccidentValue("city")} />
-                    <FloatingField id="gac-address" label="Ø¹Ù†ÙˆØ§Ù† Ø§Ù„Ø¹Ù…ÙŠÙ„" value={generalAccidentForm.address} error={generalAccidentErrors.address} onChange={setGeneralAccidentValue("address")} />
+                    <FloatingField id="gac-fullName" label="الاسم الكامل" value={generalAccidentForm.fullName} error={generalAccidentErrors.fullName} required onChange={setGeneralAccidentValue("fullName")} />
+                    <FloatingField id="gac-mobile" label="رقم الموبايل" value={generalAccidentForm.mobile} error={generalAccidentErrors.mobile} required inputMode="tel" onChange={setGeneralAccidentValue("mobile")} />
+                    <FloatingField id="gac-email" label="البريد الإلكتروني" value={generalAccidentForm.email} error={generalAccidentErrors.email} type="email" onChange={setGeneralAccidentValue("email")} />
+                    <FloatingField id="gac-nationalId" label="الرقم الوطني" value={generalAccidentForm.nationalId} error={generalAccidentErrors.nationalId} required onChange={setGeneralAccidentValue("nationalId")} />
+                    <FloatingField id="gac-city" label="المدينة" value={generalAccidentForm.city} error={generalAccidentErrors.city} required onChange={setGeneralAccidentValue("city")} />
+                    <FloatingField id="gac-address" label="عنوان العميل" value={generalAccidentForm.address} error={generalAccidentErrors.address} onChange={setGeneralAccidentValue("address")} />
                   </div>
                 </motion.section>
 
                 <motion.section className="panel" {...sectionAnimation}>
-                  <h2>ØªÙØ§ØµÙŠÙ„ Ø§Ù„Ù†Ø´Ø§Ø· ÙˆØ§Ù„Ø®Ø·Ø±</h2>
+                  <h2>تفاصيل المؤمن له والخطر</h2>
                   <div className="grid three">
-                    <FloatingField id="gac-insuredName" label="Ø§Ø³Ù… Ø§Ù„Ù…Ø¤Ù…Ù† Ù„Ù‡" value={generalAccidentForm.insuredName} error={generalAccidentErrors.insuredName} required onChange={setGeneralAccidentValue("insuredName")} />
-                    <FloatingField id="gac-businessActivity" label="Ù†Ø´Ø§Ø· Ø§Ù„Ø¹Ù…Ù„" value={generalAccidentForm.businessActivity} error={generalAccidentErrors.businessActivity} required onChange={setGeneralAccidentValue("businessActivity")} />
-                    <FloatingField id="gac-accidentType" label="Ù†ÙˆØ¹ Ø§Ù„Ø­Ø§Ø¯Ø«" value={generalAccidentForm.accidentType} error={generalAccidentErrors.accidentType} required onChange={setGeneralAccidentValue("accidentType")} />
-                    <FloatingField id="gac-coverageScope" label="Ù†Ø·Ø§Ù‚ Ø§Ù„ØªØºØ·ÙŠØ©" value={generalAccidentForm.coverageScope} error={generalAccidentErrors.coverageScope} required onChange={setGeneralAccidentValue("coverageScope")} />
-                    <FloatingField id="gac-riskLocation" label="Ù…ÙˆÙ‚Ø¹ Ø§Ù„Ø®Ø·Ø±" value={generalAccidentForm.riskLocation} error={generalAccidentErrors.riskLocation} required onChange={setGeneralAccidentValue("riskLocation")} />
-                    <FloatingField id="gac-riskCity" label="Ù…Ø¯ÙŠÙ†Ø© Ø§Ù„Ø®Ø·Ø±" value={generalAccidentForm.riskCity} error={generalAccidentErrors.riskCity} required onChange={setGeneralAccidentValue("riskCity")} />
+                    <FloatingField id="gac-insuredName" label="اسم المؤمن له" value={generalAccidentForm.insuredName} error={generalAccidentErrors.insuredName} required onChange={setGeneralAccidentValue("insuredName")} />
+                    <FloatingField id="gac-businessActivity" label="نشاط العمل" value={generalAccidentForm.businessActivity} error={generalAccidentErrors.businessActivity} required onChange={setGeneralAccidentValue("businessActivity")} />
+                    <FloatingField id="gac-accidentType" label="نوع الحادث" value={generalAccidentForm.accidentType} error={generalAccidentErrors.accidentType} required onChange={setGeneralAccidentValue("accidentType")} />
+                    <FloatingField id="gac-coverageScope" label="نطاق التغطية" value={generalAccidentForm.coverageScope} error={generalAccidentErrors.coverageScope} required onChange={setGeneralAccidentValue("coverageScope")} />
+                    <FloatingField id="gac-riskLocation" label="موقع الخطر" value={generalAccidentForm.riskLocation} error={generalAccidentErrors.riskLocation} required onChange={setGeneralAccidentValue("riskLocation")} />
+                    <FloatingField id="gac-riskCity" label="مدينة الخطر" value={generalAccidentForm.riskCity} error={generalAccidentErrors.riskCity} required onChange={setGeneralAccidentValue("riskCity")} />
                   </div>
                 </motion.section>
 
                 <motion.section className="panel" {...sectionAnimation}>
-                  <h2>Ø­Ø¯ÙˆØ¯ Ø§Ù„ØªØºØ·ÙŠØ© ÙˆØ§Ù„Ø£Ø¹Ø¯Ø§Ø¯</h2>
+                  <h2>حدود التغطية والأعداد</h2>
                   <div className="grid three">
-                    <FloatingField id="gac-employeesCount" label="Ø¹Ø¯Ø¯ Ø§Ù„Ù…ÙˆØ¸ÙÙŠÙ†" value={generalAccidentForm.employeesCount} error={generalAccidentErrors.employeesCount} required inputMode="numeric" onChange={setGeneralAccidentValue("employeesCount")} />
-                    <FloatingField id="gac-beneficiariesCount" label="Ø¹Ø¯Ø¯ Ø§Ù„Ù…Ø³ØªÙÙŠØ¯ÙŠÙ†" value={generalAccidentForm.beneficiariesCount} error={generalAccidentErrors.beneficiariesCount} inputMode="numeric" onChange={setGeneralAccidentValue("beneficiariesCount")} />
-                    <FloatingField id="gac-coverageLimit" label="Ø­Ø¯ Ø§Ù„ØªØºØ·ÙŠØ©" value={generalAccidentForm.coverageLimit} error={generalAccidentErrors.coverageLimit} required inputMode="decimal" onChange={setGeneralAccidentValue("coverageLimit")} />
-                    <FloatingField id="gac-deductibleAmount" label="Ù…Ø¨Ù„Øº Ø§Ù„ØªØ­Ù…Ù„" value={generalAccidentForm.deductibleAmount} error={generalAccidentErrors.deductibleAmount} inputMode="decimal" onChange={setGeneralAccidentValue("deductibleAmount")} />
-                    <FloatingField id="gac-estimatedAnnualWages" label="Ø§Ù„Ø£Ø¬ÙˆØ± Ø§Ù„Ø³Ù†ÙˆÙŠØ© Ø§Ù„Ù…Ù‚Ø¯Ø±Ø©" value={generalAccidentForm.estimatedAnnualWages} error={generalAccidentErrors.estimatedAnnualWages} inputMode="decimal" onChange={setGeneralAccidentValue("estimatedAnnualWages")} />
-                    <FloatingField id="gac-currency" label="Ø§Ù„Ø¹Ù…Ù„Ø©" value={generalAccidentForm.currency} error={generalAccidentErrors.currency} required onChange={setGeneralAccidentValue("currency")} />
+                    <FloatingField id="gac-employeesCount" label="عدد الموظفين" value={generalAccidentForm.employeesCount} error={generalAccidentErrors.employeesCount} required inputMode="numeric" onChange={setGeneralAccidentValue("employeesCount")} />
+                    <FloatingField id="gac-beneficiariesCount" label="عدد المستفيدين" value={generalAccidentForm.beneficiariesCount} error={generalAccidentErrors.beneficiariesCount} inputMode="numeric" onChange={setGeneralAccidentValue("beneficiariesCount")} />
+                    <FloatingField id="gac-coverageLimit" label="حد التغطية" value={generalAccidentForm.coverageLimit} error={generalAccidentErrors.coverageLimit} required inputMode="decimal" onChange={setGeneralAccidentValue("coverageLimit")} />
+                    <FloatingField id="gac-deductibleAmount" label="مبلغ التحمل" value={generalAccidentForm.deductibleAmount} error={generalAccidentErrors.deductibleAmount} inputMode="decimal" onChange={setGeneralAccidentValue("deductibleAmount")} />
+                    <FloatingField id="gac-estimatedAnnualWages" label="الأجور السنوية المقدرة" value={generalAccidentForm.estimatedAnnualWages} error={generalAccidentErrors.estimatedAnnualWages} inputMode="decimal" onChange={setGeneralAccidentValue("estimatedAnnualWages")} />
+                    <FloatingField id="gac-currency" label="العملة" value={generalAccidentForm.currency} error={generalAccidentErrors.currency} required onChange={setGeneralAccidentValue("currency")} />
                   </div>
+                </motion.section>
+
+                <motion.section className="panel" {...sectionAnimation}>
+                  <h2>السلامة والملاحظات</h2>
                   <div className="grid two">
-                    <label className="confirm compact-confirm">
-                      <input type="checkbox" checked={generalAccidentForm.hasSafetyProgram} onChange={setGeneralAccidentValue("hasSafetyProgram")} />
-                      <span>ÙŠÙˆØ¬Ø¯ Ø¨Ø±Ù†Ø§Ù…Ø¬ Ø³Ù„Ø§Ù…Ø©</span>
-                    </label>
-                    <label className="confirm compact-confirm">
-                      <input type="checkbox" checked={generalAccidentForm.previousClaims} onChange={setGeneralAccidentValue("previousClaims")} />
-                      <span>ØªÙˆØ¬Ø¯ Ù…Ø·Ø§Ù„Ø¨Ø§Øª Ø³Ø§Ø¨Ù‚Ø©</span>
-                    </label>
-                  </div>
-                </motion.section>
-
-                <motion.section className="panel" {...sectionAnimation}>
-                  <h2>ØªÙØ§ØµÙŠÙ„ Ø¥Ø¶Ø§ÙÙŠØ©</h2>
-                  <div className="grid two">
-                    <FloatingField id="gac-riskDetails" label="ØªÙØ§ØµÙŠÙ„ Ø§Ù„Ø®Ø·Ø±" value={generalAccidentForm.riskDetails} error={generalAccidentErrors.riskDetails} multiline rows={6} onChange={setGeneralAccidentValue("riskDetails")} />
-                    <FloatingField id="gac-notes" label="Ù…Ù„Ø§Ø­Ø¸Ø§Øª" value={generalAccidentForm.notes} error={generalAccidentErrors.notes} multiline rows={6} onChange={setGeneralAccidentValue("notes")} />
+                    <label className="confirm compact-confirm"><input type="checkbox" checked={generalAccidentForm.hasSafetyProgram} onChange={setGeneralAccidentValue("hasSafetyProgram")} /><span>يوجد برنامج سلامة</span></label>
+                    <label className="confirm compact-confirm"><input type="checkbox" checked={generalAccidentForm.previousClaims} onChange={setGeneralAccidentValue("previousClaims")} /><span>توجد مطالبات سابقة</span></label>
+                    <FloatingField id="gac-riskDetails" label="تفاصيل الخطر" value={generalAccidentForm.riskDetails} error={generalAccidentErrors.riskDetails} multiline rows={6} onChange={setGeneralAccidentValue("riskDetails")} />
+                    <FloatingField id="gac-notes" label="ملاحظات" value={generalAccidentForm.notes} error={generalAccidentErrors.notes} multiline rows={6} onChange={setGeneralAccidentValue("notes")} />
                   </div>
                 </motion.section>
 
                 <motion.section className="panel review-panel" {...sectionAnimation}>
-                  <h2>Ù…Ø±Ø§Ø¬Ø¹Ø© Ø§Ù„Ø·Ù„Ø¨</h2>
+                  <h2>مراجعة الطلب</h2>
                   <div className="review-grid">
-                    <span>Ø§Ù„Ø¹Ù…ÙŠÙ„</span>
-                    <strong>{generalAccidentForm.fullName || "-"}</strong>
-                    <span>Ø§Ù„Ù…Ø¤Ù…Ù† Ù„Ù‡</span>
-                    <strong>{generalAccidentForm.insuredName || "-"}</strong>
-                    <span>Ù†ÙˆØ¹ Ø§Ù„Ø­Ø§Ø¯Ø«</span>
-                    <strong>{generalAccidentForm.accidentType || "-"}</strong>
-                    <span>Ø­Ø¯ Ø§Ù„ØªØºØ·ÙŠØ©</span>
-                    <strong>{generalAccidentForm.coverageLimit ? `${generalAccidentForm.coverageLimit} ${generalAccidentForm.currency}` : "-"}</strong>
+                    <span>العميل</span><strong>{generalAccidentForm.fullName || "-"}</strong>
+                    <span>المؤمن له</span><strong>{generalAccidentForm.insuredName || "-"}</strong>
+                    <span>نوع الحادث</span><strong>{generalAccidentForm.accidentType || "-"}</strong>
+                    <span>حد التغطية</span><strong>{generalAccidentForm.coverageLimit ? generalAccidentForm.coverageLimit + " " + generalAccidentForm.currency : "-"}</strong>
                   </div>
-                  <label className={`confirm ${generalAccidentErrors.confirmed ? "field-error" : ""}`}>
+                  <label className={"confirm " + (generalAccidentErrors.confirmed ? "field-error" : "")}>
                     <input type="checkbox" checked={generalAccidentForm.confirmed} onChange={setGeneralAccidentValue("confirmed")} />
-                    <span>Ø£Ø¤ÙƒØ¯ ØµØ­Ø© Ø§Ù„Ù…Ø¹Ù„ÙˆÙ…Ø§Øª ÙˆØ£ÙˆØ§ÙÙ‚ Ø¹Ù„Ù‰ Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨ ØªØ£Ù…ÙŠÙ† Ø§Ù„Ø­ÙˆØ§Ø¯Ø« Ø§Ù„Ø¹Ø§Ù…Ø© Ø¥Ù„Ù‰ TRINSU.</span>
+                    <span>أؤكد صحة المعلومات وأوافق على إرسال طلب تأمين الحوادث العامة إلى TRINSU.</span>
                   </label>
                   {generalAccidentErrors.confirmed ? <p className="error-text">{generalAccidentErrors.confirmed}</p> : null}
                   {generalAccidentSubmitError ? <p id="general-accident-submit-error" className="submit-error" role="alert">{generalAccidentSubmitError}</p> : null}
                   <button className="submit-button" type="submit" disabled={isGeneralAccidentSubmitting}>
                     {isGeneralAccidentSubmitting ? <span className="spinner" aria-hidden="true" /> : <CheckCircle2 size={20} aria-hidden="true" />}
-                    {isGeneralAccidentSubmitting ? "Ø¬Ø§Ø±ÙŠ Ø§Ù„Ø¥Ø±Ø³Ø§Ù„" : "Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨ ØªØ£Ù…ÙŠÙ† Ø§Ù„Ø­ÙˆØ§Ø¯Ø« Ø§Ù„Ø¹Ø§Ù…Ø©"}
+                    {isGeneralAccidentSubmitting ? "جاري الإرسال" : "إرسال طلب تأمين الحوادث العامة"}
                   </button>
                 </motion.section>
 
                 {generalAccidentRequest ? (
                   <motion.section className="success-panel" role="status" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
                     <CheckCircle2 size={42} aria-hidden="true" />
-                    <h2>ØªÙ… Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨ ØªØ£Ù…ÙŠÙ† Ø§Ù„Ø­ÙˆØ§Ø¯Ø« Ø§Ù„Ø¹Ø§Ù…Ø©</h2>
-                    <p>ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø·Ù„Ø¨ ÙÙŠ Ù†Ø¸Ø§Ù… TRINSU Ø¨Ù†Ø¬Ø§Ø­.</p>
-                    <div className="success-numbers">
-                      <div>
-                        <span>Ø±Ù‚Ù… Ø§Ù„Ø·Ù„Ø¨</span>
-                        <strong>{generalAccidentRequest.requestNumber}</strong>
-                      </div>
-                      <div>
-                        <span>Ø±Ù‚Ù… Ø§Ù„ØªØªØ¨Ø¹</span>
-                        <strong>{generalAccidentRequest.trackingNumber}</strong>
-                      </div>
-                    </div>
-                    <div className="success-status">
-                      <span>Ø§Ù„Ø­Ø§Ù„Ø©</span>
-                      <strong>{generalAccidentRequest.status}</strong>
-                    </div>
+                    <h2>تم إرسال طلب تأمين الحوادث العامة</h2>
+                    <p>تم تسجيل الطلب في نظام TRINSU بنجاح.</p>
+                    <div className="success-numbers"><div><span>رقم الطلب</span><strong>{generalAccidentRequest.requestNumber}</strong></div><div><span>رقم التتبع</span><strong>{generalAccidentRequest.trackingNumber}</strong></div></div>
+                    <div className="success-status"><span>الحالة</span><strong>{generalAccidentRequest.status}</strong></div>
+                    <div className="success-actions"><button className="submit-button" type="button" onClick={() => openTrackingRequest(generalAccidentRequest.trackingNumber)}><MapPinned size={18} aria-hidden="true" />تتبع الطلب</button></div>
                   </motion.section>
                 ) : null}
               </fieldset>
